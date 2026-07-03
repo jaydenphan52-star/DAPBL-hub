@@ -5957,6 +5957,10 @@ async function _loadSupabaseData(){
   if(d.nPblTr!==undefined)nPblTr=d.nPblTr;
   if(d.nMerch!==undefined)nMerch=d.nMerch;
   if(d.memberDb)memberDb=d.memberDb;if(d.nMDb!==undefined)nMDb=d.nMDb;
+  if(d.mdbProgress)mdbProgress=d.mdbProgress;if(d.nMDbP!==undefined)nMDbP=d.nMDbP;
+  if(d.mdbPlacements)mdbPlacements=d.mdbPlacements;if(d.nMDbPl!==undefined)nMDbPl=d.nMDbPl;
+  if(d.hubDocs)hubDocs=d.hubDocs;if(d.nDoc!==undefined)nDoc=d.nDoc;
+  if(d.docFolders)docFolders=d.docFolders;
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}
 }
 // Auto-restore session on page refresh
