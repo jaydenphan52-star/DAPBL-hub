@@ -915,9 +915,17 @@ textarea{resize:vertical;min-height:120px;}
             </div>
           </div>
         </div>
-        <div class="card">
-          <div class="ch"><div class="ct">Document Library</div><div style="display:flex;gap:6px"><input id="doc-search" type="text" placeholder="Search…" oninput="renderDocs()" style="font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none;width:140px"><select id="doc-filter" onchange="renderDocs()" style="font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1)"><option value="">All Sections</option></select></div></div>
-          <div id="docs-library"></div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <!-- Folder sidebar -->
+          <div class="card" style="width:180px;flex-shrink:0">
+            <div class="ch" style="margin-bottom:8px"><div class="ct" style="font-size:11px">Folders</div><button class="btn btn-p btn-sm" style="font-size:10px;padding:2px 7px" onclick="addDocFolder()">+ New</button></div>
+            <div id="doc-folder-list"></div>
+          </div>
+          <!-- Library -->
+          <div class="card" style="flex:1">
+            <div class="ch"><div class="ct">Document Library</div><input id="doc-search" type="text" placeholder="Search…" oninput="renderDocs()" style="font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none;width:140px"></div>
+            <div id="docs-library"></div>
+          </div>
         </div>
       </div>
 
@@ -5194,7 +5202,7 @@ async function saveData(){
     members,execTeam,bootcamps,tasks,agendas,eventsData,emails,consultingProjects,clients,deliverables,
     compResults,compHistory,transactions,meetingMinutes,prospects,goals,transitionDocs,announcements,
     mentorPairs,sponsors,pipeline,rosData,eventCosts,reimbursements,venues,volunteerSlots,compPrep,
-    curriculum,brandKit,contentPosts,memberCheckIns,memberDb,mdbProgress,mdbPlacements,hubDocs,
+    curriculum,brandKit,contentPosts,memberCheckIns,memberDb,mdbProgress,mdbPlacements,hubDocs,docFolders,
     compEvents,resources,eventSlides,lectureSlides,
     pblTransactions,merchSales,importedCalEvents,
     nM,nE,nB,nT,nA,nEv,nEmail,nCon,nCli,nDel,nCR,nCE,nCH,nTr,nMin,nPr,nGoal,nTD,nAnn,nMP,nSp,nPl,nRos,
@@ -5252,6 +5260,7 @@ function loadData(){
     if(d.mdbProgress)mdbProgress=d.mdbProgress;if(d.nMDbP)nMDbP=d.nMDbP;
     if(d.mdbPlacements)mdbPlacements=d.mdbPlacements;if(d.nMDbPl)nMDbPl=d.nMDbPl;
     if(d.hubDocs)hubDocs=d.hubDocs;if(d.nDoc)nDoc=d.nDoc;
+    if(d.docFolders)docFolders=d.docFolders;
     if(d.resources)resources=d.resources;
     if(d.eventSlides)eventSlides=d.eventSlides;
     if(d.lectureSlides)lectureSlides=d.lectureSlides;
@@ -5572,55 +5581,86 @@ function clearRosSheet(){
 
 // ---- DOCUMENTS ----
 let hubDocs=[];let nDoc=1;
+let docFolders=['General','Events','Finance','Competition','Bootcamps'];
+let activeDocFolder='';
 let _pendingDoc=null;
 
-const DOC_SECTIONS=['Members / Attendance','Bootcamps','Tasks / Agendas','Events','Sponsors / Emails','Budget / Finance','Competition Prep','Templates / Resources','Meeting Minutes','Announcements','General'];
-
-function renderDocs(){
-  const q=(document.getElementById('doc-search')?.value||'').toLowerCase();
-  const filt=document.getElementById('doc-filter')?.value||'';
-  const sel=document.getElementById('doc-filter');
-  if(sel){
-    const used=[...new Set(hubDocs.map(d=>d.section))].sort();
-    sel.innerHTML='<option value="">All Sections</option>'+used.map(s=>`<option value="${s}"${s===filt?' selected':''}>${s}</option>`).join('');
+function renderDocFolders(){
+  const fl=document.getElementById('doc-folder-list');if(!fl)return;
+  fl.innerHTML=`<div class="cr" style="padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer;font-weight:${!activeDocFolder?'600':'400'};color:${!activeDocFolder?'var(--t1)':'var(--t3)'}" onclick="setDocFolder('')">All Documents <span style="color:var(--t4);font-size:10px">(${hubDocs.length})</span></div>`+
+    docFolders.map(f=>{
+      const count=hubDocs.filter(d=>d.folder===f).length;
+      return`<div class="cr" style="padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="setDocFolder('${f}')">
+        <span style="font-weight:${activeDocFolder===f?'600':'400'};color:${activeDocFolder===f?'var(--t1)':'var(--t3)'}">${f} <span style="color:var(--t4);font-size:10px">(${count})</span></span>
+        <button class="rb" style="opacity:0;font-size:10px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0" onclick="event.stopPropagation();renameOrDeleteFolder('${f}')">&hellip;</button>
+      </div>`;
+    }).join('');
+}
+function setDocFolder(f){activeDocFolder=f;renderDocFolders();renderDocs();}
+function addDocFolder(){
+  const name=prompt('Folder name:');
+  if(!name||!name.trim())return;
+  const n=name.trim();
+  if(!docFolders.includes(n))docFolders.push(n);
+  activeDocFolder=n;
+  saveData();renderDocFolders();renderDocs();
+}
+function renameOrDeleteFolder(f){
+  const choice=confirm(`Delete folder "${f}"?\n\nOK = Delete folder (docs move to General)\nCancel = Rename`);
+  if(choice){
+    hubDocs.forEach(d=>{if(d.folder===f)d.folder='General';});
+    docFolders=docFolders.filter(x=>x!==f);
+    if(activeDocFolder===f)activeDocFolder='';
+  } else {
+    const name=prompt('New name:',f);
+    if(!name||!name.trim())return;
+    const n=name.trim();
+    hubDocs.forEach(d=>{if(d.folder===f)d.folder=n;});
+    docFolders=docFolders.map(x=>x===f?n:x);
+    if(activeDocFolder===f)activeDocFolder=n;
   }
+  saveData();renderDocFolders();renderDocs();
+}
+function renderDocs(){
+  renderDocFolders();
+  const q=(document.getElementById('doc-search')?.value||'').toLowerCase();
   const lib=document.getElementById('docs-library');if(!lib)return;
-  let rows=hubDocs.filter(d=>(!q||(d.name+d.content+d.section).toLowerCase().includes(q))&&(!filt||d.section===filt));
-  const groups={};rows.forEach(d=>{if(!groups[d.section])groups[d.section]=[];groups[d.section].push(d);});
-  lib.innerHTML=Object.keys(groups).length?Object.entries(groups).map(([sec,docs])=>
-    `<div style="margin-bottom:18px">
-      <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.05em;text-transform:uppercase;padding:6px 0 8px;border-bottom:1px solid var(--bd);margin-bottom:8px">${sec}</div>
-      ${docs.map(d=>`<div class="cr" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;cursor:pointer;border-radius:5px" onclick="openDocDetail(${d.id})">
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:600;color:var(--t1)">${d.name}</div>
-          <div style="font-size:11px;color:var(--t3);margin-top:2px">${d.date}${d.aiClassified?' · <span style="color:var(--grn)">✦ AI</span>':''}${d.tags?.length?' · '+d.tags.map(t=>`<span style="background:var(--s2);border:1px solid var(--bd);border-radius:3px;padding:1px 5px;font-size:10px">${t}</span>`).join(' '):''}</div>
-          ${d.content?`<div style="font-size:11px;color:var(--t4);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px">${d.content.slice(0,120)}…</div>`:''}
-        </div>
-        <button class="rb" style="opacity:.4;margin-left:8px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.4" onclick="event.stopPropagation();hubDocs=hubDocs.filter(x=>x.id!==${d.id});renderDocs();updateDocStats();saveData()">&times;</button>
-      </div>`).join('')}
+  let rows=hubDocs.filter(d=>
+    (!activeDocFolder||d.folder===activeDocFolder)&&
+    (!q||(d.name+(d.content||'')).toLowerCase().includes(q))
+  );
+  lib.innerHTML=rows.length?rows.map(d=>`
+    <div class="cr" style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;cursor:pointer;border-radius:5px" onclick="openDocDetail(${d.id})">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:var(--t1)">${d.name}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">${d.folder||'General'} · ${d.date}${d.aiClassified?' · <span style="color:var(--grn)">✦ AI</span>':''}${(d.tags||[]).length?' · '+d.tags.map(t=>`<span style="background:var(--s2);border:1px solid var(--bd);border-radius:3px;padding:1px 5px;font-size:10px">${t}</span>`).join(' '):''}</div>
+        ${d.driveUrl?`<a href="${d.driveUrl}" target="_blank" style="font-size:10px;color:var(--cr);text-decoration:none" onclick="event.stopPropagation()">Open in Drive ↗</a>`:''}
+      </div>
+      <button class="rb" style="opacity:.4;margin-left:8px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.4" onclick="event.stopPropagation();hubDocs=hubDocs.filter(x=>x.id!==${d.id});renderDocs();updateDocStats();saveData()">&times;</button>
     </div>`).join('')
-    :'<div style="color:var(--t4);font-size:12px;padding:16px 0">No documents yet. Add one above.</div>';
+    :'<div style="color:var(--t4);font-size:12px;padding:16px 0">No documents here yet.</div>';
   updateDocStats();
 }
 function updateDocStats(){
   const t=document.getElementById('docs-stat-total');if(t)t.textContent=hubDocs.length;
   const a=document.getElementById('docs-stat-ai');if(a)a.textContent=hubDocs.filter(d=>d.aiClassified).length;
-  const s=document.getElementById('docs-stat-sections');if(s)s.textContent=[...new Set(hubDocs.map(d=>d.section))].length;
+  const s=document.getElementById('docs-stat-sections');if(s)s.textContent=docFolders.length;
 }
 function openDocDetail(id){
   const d=hubDocs.find(x=>x.id===id);if(!d)return;
-  openDetail(d.name,d.section,
-    row2(fld('Name',inp('ed-doc-name',d.name)),fld('Section',sel('ed-doc-section',DOC_SECTIONS,d.section)))+
+  openDetail(d.name,d.folder||'General',
+    row2(fld('Name',inp('ed-doc-name',d.name)),fld('Folder',sel('ed-doc-folder',docFolders,d.folder||'General')))+
     fld('Tags (comma separated)',inp('ed-doc-tags',(d.tags||[]).join(', ')))+
-    fld('Content',ta('ed-doc-content',d.content,8))+
+    (d.driveUrl?fld('Drive Link',`<a href="${d.driveUrl}" target="_blank" style="font-size:12px;color:var(--cr)">${d.driveUrl}</a>`):'')+
+    fld('Notes',ta('ed-doc-content',d.content||'',5))+
     `<div style="display:flex;gap:7px;margin-top:4px"><button class="btn btn-p btn-sm" onclick="saveDoc(${id},this)">Save</button><button class="btn btn-g btn-sm" style="color:#E57373" onclick="hubDocs=hubDocs.filter(x=>x.id!==${id});renderDocs();updateDocStats();saveData();closeDetail()">Delete</button></div>`,d);
 }
 function saveDoc(id,btn){
   const d=hubDocs.find(x=>x.id===id);if(!d)return;
-  d.name=g('ed-doc-name');d.section=g('ed-doc-section');d.content=g('ed-doc-content');
+  d.name=g('ed-doc-name');d.folder=g('ed-doc-folder');d.content=g('ed-doc-content');
   d.tags=g('ed-doc-tags').split(',').map(t=>t.trim()).filter(Boolean);
   document.getElementById('d-title').textContent=d.name;
-  document.getElementById('d-sub').textContent=d.section;
+  document.getElementById('d-sub').textContent=d.folder;
   renderDocs();saved(btn);saveData();
 }
 function openDriveForDocs(){
@@ -5645,9 +5685,11 @@ async function classifyDriveDoc(fileId,fileName,mimeType){
     status.textContent='Classifying…';
     const res=await window._sb.functions.invoke('classify-document',{body:{content:content.slice(0,3000),filename:fileName}});
     const result=res.data||{};
-    _pendingDoc={name:fileName,content:content.slice(0,5000),driveId:fileId,driveUrl:`https://drive.google.com/file/d/${fileId}/view`,section:result.section||'General',reason:result.reason||'',tags:result.tags||[],aiClassified:true};
+    const suggestedFolder=result.section||'General';
+    if(!docFolders.includes(suggestedFolder))docFolders.push(suggestedFolder);
+    _pendingDoc={name:fileName,content:content.slice(0,5000),driveId:fileId,driveUrl:`https://drive.google.com/file/d/${fileId}/view`,folder:suggestedFolder,reason:result.reason||'',tags:result.tags||[],aiClassified:true};
     document.getElementById('doc-ai-name').textContent=fileName;
-    document.getElementById('doc-ai-section').textContent=result.section||'General';
+    document.getElementById('doc-ai-section').textContent=suggestedFolder;
     document.getElementById('doc-ai-reason').textContent=result.reason||'';
     document.getElementById('doc-ai-tags').innerHTML=(result.tags||[]).map(t=>`<span style="background:var(--s2);border:1px solid var(--bd);border-radius:3px;padding:1px 6px;font-size:10px">${t}</span>`).join('');
     document.getElementById('doc-ai-result').style.display='block';
