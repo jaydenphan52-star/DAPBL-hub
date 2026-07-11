@@ -719,13 +719,20 @@ textarea{resize:vertical;min-height:120px;}
         </div>
         <div class="sub" id="events-ros">
           <div class="card">
-            <div class="ch"><div class="ct" id="ros-event-title">Run of Show</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><select id="ros-event-select" onchange="switchRos(this.value)" style="font-size:10px;padding:3px 7px;width:auto"><option value="">Select Event...</option></select><button class="btn btn-g btn-sm" onclick="addRosEvent()">+ New Event</button><button class="btn btn-g btn-sm" style="color:#E57373" onclick="removeRosEvent()">Remove Event</button></div></div>
+            <div class="ch"><div class="ct" id="ros-event-title">Run of Show</div><select id="ros-event-select" onchange="switchRos(this.value)" style="font-size:10px;padding:3px 7px;width:auto"><option value="">Select Event...</option></select></div>
+            <div style="font-size:10px;color:var(--t4);margin-bottom:10px">Events are added from the Upcoming tab. Build the timed schedule below.</div>
+            <table><thead><tr><th style="width:70px">Day</th><th style="width:80px">Start</th><th style="width:80px">End</th><th>Item / Activity</th><th style="width:130px">Owner</th><th></th></tr></thead>
+            <tbody id="ros-rows-table"></tbody></table>
+            <button class="btn btn-g btn-sm" style="margin-top:10px" onclick="addRosRow()">+ Add Row</button>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="ch"><div class="ct" style="font-size:11px">Or Embed a Google Sheet Instead</div></div>
             <div id="ros-sheet-bar" style="display:flex;gap:7px;align-items:center;margin-bottom:10px">
               <input id="ros-url-input" type="text" placeholder="Paste Google Sheets URL…" style="flex:1;font-size:11px;padding:6px 9px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
               <button class="btn btn-p btn-sm" onclick="setRosSheet()">Embed</button>
               <button class="btn btn-g btn-sm" style="color:#E57373" onclick="clearRosSheet()">Clear</button>
             </div>
-            <div id="ros-table"></div>
+            <div id="ros-sheet-embed"></div>
           </div>
         </div>
       </div>
@@ -1287,7 +1294,6 @@ textarea{resize:vertical;min-height:120px;}
           <div class="tab" onclick="showTab('portal-operations','conflogistics');renderConfLogistics()">Conference Logistics</div>
           <div class="tab" onclick="showTab('portal-operations','kpis');renderKPIs()">KPI Dashboard</div>
           <div class="tab" onclick="showTab('portal-operations','iccexcursions');renderICCExcursions()">ICC Excursions</div>
-          <div class="tab" onclick="showTab('portal-operations','eventchecklist');renderEventChecklists()">Event Checklist</div>
           <div class="tab" onclick="showTab('portal-operations','vendors');renderVendors()">Vendors</div>
         </div>
         <div class="sub active" id="portal-operations-overview">
@@ -1296,13 +1302,17 @@ textarea{resize:vertical;min-height:120px;}
             <div class="ch"><div class="ct">My Tasks</div><button class="btn btn-p btn-sm" onclick="openTaskModal('ebod')">+ Add Task</button></div>
             <div id="portal-operations-tasks"></div>
           </div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="ch"><div class="ct">Upcoming Events</div><span class="btn-lnk" onclick="showPage('events')">Open Events &#8250;</span></div>
+            <div id="portal-operations-events"></div>
+          </div>
           <div class="ch" style="margin-bottom:10px"><div class="ct">Quick Access</div></div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px" id="portal-operations-links"></div>
         </div>
         <div class="sub" id="portal-operations-venues">
           <div class="card">
             <div class="ch"><div class="ct">Venue Tracker</div><button class="btn btn-p btn-sm" onclick="addVenue()">+ Add Venue</button></div>
-            <table><thead><tr><th>Venue</th><th>Contact</th><th>Capacity</th><th>Cost</th><th>Status</th><th></th></tr></thead>
+            <table><thead><tr><th>Venue</th><th>Contact</th><th>Capacity</th><th>Cost</th><th>Status</th><th>Linked Event</th><th></th></tr></thead>
             <tbody id="venues-table"></tbody></table>
           </div>
         </div>
@@ -1336,20 +1346,11 @@ textarea{resize:vertical;min-height:120px;}
           </div>
         </div>
 
-        <!-- EVENT CHECKLIST TAB -->
-        <div class="sub" id="portal-operations-eventchecklist">
-          <div class="card">
-            <div class="ch"><div class="ct">Pre / Post Event Checklists</div><button class="btn btn-p btn-sm" onclick="addEventChecklist()">+ Add Event</button></div>
-            <table><thead><tr><th>Event</th><th>Date</th><th>Pre-Event Items</th><th>Post-Event Items</th><th>Owner</th><th>Status</th><th></th></tr></thead>
-            <tbody id="event-checklist-table"></tbody></table>
-          </div>
-        </div>
-
         <!-- VENDOR DIRECTORY TAB -->
         <div class="sub" id="portal-operations-vendors">
           <div class="card">
             <div class="ch"><div class="ct">Vendor &amp; Contact Directory</div><button class="btn btn-p btn-sm" onclick="addVendorEntry()">+ Add Vendor</button></div>
-            <table><thead><tr><th>Vendor / Contact</th><th>Category</th><th>Contact Name</th><th>Email / Phone</th><th>Last Used</th><th>Rating</th><th>Notes</th><th></th></tr></thead>
+            <table><thead><tr><th>Vendor / Contact</th><th>Category</th><th>Contact Name</th><th>Email / Phone</th><th>Last Used</th><th>Rating</th><th>Used In</th><th>Notes</th><th></th></tr></thead>
             <tbody id="vendors-directory-table"></tbody></table>
           </div>
         </div>
@@ -2288,21 +2289,6 @@ textarea{resize:vertical;min-height:120px;}
     <div class="mf"><button class="btn btn-g" onclick="closeModals()">Cancel</button><button class="btn btn-p" onclick="submitICCExcursion()">Log</button></div>
   </div>
 </div>
-<div class="overlay" id="event-checklist-modal">
-  <div class="modal"><div class="mt">Add Event Checklist</div>
-    <div class="fr">
-      <div class="fg"><div class="fl">Event Name</div><input id="ec-event" type="text" placeholder="e.g. DAIS 2026"></div>
-      <div class="fg"><div class="fl">Date</div><input id="ec-date" type="date"></div>
-    </div>
-    <div class="fg"><div class="fl">Pre-Event Checklist (one item per line)</div><textarea id="ec-pre" rows="4" placeholder="Confirm venue&#10;Order catering&#10;Send reminder emails"></textarea></div>
-    <div class="fg"><div class="fl">Post-Event Checklist (one item per line)</div><textarea id="ec-post" rows="3" placeholder="Send thank-you emails&#10;Upload photos&#10;Log attendance"></textarea></div>
-    <div class="fr">
-      <div class="fg"><div class="fl">Owner</div><input id="ec-owner" type="text" placeholder="Name"></div>
-      <div class="fg"><div class="fl">Status</div><select id="ec-status"><option>Pre-Event</option><option>In Progress</option><option>Post-Event</option><option>Completed</option></select></div>
-    </div>
-    <div class="mf"><button class="btn btn-g" onclick="closeModals()">Cancel</button><button class="btn btn-p" onclick="submitEventChecklist()">Add</button></div>
-  </div>
-</div>
 <div class="overlay" id="vendor-modal">
   <div class="modal"><div class="mt">Add Vendor</div>
     <div class="fr">
@@ -2710,12 +2696,13 @@ let eventsData={
     {id:7,name:'IM Meeting — Run Throughs',date:'May 19, 2026',loc:'MLC 105',att:35,desc:'Intermediate Member meeting.\n\nFocus: Run throughs with leaderboard.\nTime: 5–7 PM, business casual.',files:[]},
     {id:8,name:'IM Meeting — Run Throughs',date:'May 21, 2026',loc:'MLC 105',att:35,desc:'Intermediate Member meeting.\n\nFocus: Run throughs with leaderboard.\nTime: 5–7 PM, business casual.',files:[]},
     {id:9,name:'CSP Planting Event',date:'May 16, 2026',loc:'De Anza Campus',att:20,desc:'Community service planting event with CSP.\nTime: 9:00 AM–12:00 PM.\nRSVP via Eventbrite link.',files:[]},
+    {id:11,name:'DASH 2026 (De Anza Strategic Horizons)',date:'Oct 9–11, 2026',loc:'Conference Rooms A & B + Don Bautista',att:0,desc:'Successor to DAIS. 3 half-days (12–4 PM) instead of 2 full days (14hrs → 12hrs total) to cut food cost and tighten the gap between judging rounds.',notes:'NAME IDEAS\n- DARE — De Anza Risk Expo\n- DASH — De Anza Strategic Horizons\n\nGOALS / VISION\n- More inviting vs. more intimidating — think about what people feel before, during, and after\n- Three overarching goals: recruitment, learning/experience, branding\n- Success = 115 members signed up\n\nGENERAL IMPROVEMENTS\n- Food: budget limitations (assuming ICC $250) — look into KPMG sponsorship?\n- Time between prelims → finals is too long — add a networking game or a no-talking grouping game\n- Members don\'t know how to case — S&D to make a "how to case" + basic financials guide\n- Consider bringing the event off-site\n\nMIXER IDEAS\n- Trivia (need to write questions)\n- Condition-based grouping game (group by on-screen prompt, no talking)\n\nLOGISTICS NOTES\n- Get Lehem\'s view of Conference Room A & B + Don Bautista to plan space & sign-up flow\n- Fix technical hiccups (ref. cue sheet) — more run-throughs, more setup/cleanup buffer\n\nSPEAKERS\n- Connect w/ Lehem\n- Jayden → Cheryl, X',files:[],checklist:[{id:1,item:'Make prompt',phase:'Pre',owner:'',done:false}]},
   ],
   past:[
     {id:3,name:'SBLC 2026 - Emeryville, CA',date:'Mar 2026',loc:'Emeryville',att:23,desc:'State Business Leadership Conference 2026.\n\nResults:\n- 17 entries total\n- 1st Place: Community Service Project\n- 1st Place: Entrepreneurship Pitch Competition\n\nPost-Event Notes:\n- Need more prep time for written events\n- Financial gaps identified, inform bootcamp curriculum\n- Start prep 6 weeks out instead of 4',files:[]},
     {id:10,name:'BJ\'s Fundraiser Night',date:'May 7, 2026',loc:'BJ\'s — 10690 N De Anza Blvd',att:30,desc:'CSP fundraiser night at BJ\'s Restaurant.\nTime: 7:00–11:00 PM.\nCode: MAY411 at checkout.',files:[]},
   ]
-};let nEv=11;
+};let nEv=12;
 
 let emails=[
   {subj:'Partnership Opportunity - De Anza PBL Spring 2026',to:'Bay Area Credit Union (Maria Santos)',date:'Apr 5, 2026',status:'Responded',body:'Dear Ms. Santos,\n\nI hope this message finds you well. My name is Jayden Pham and I\'m reaching out on behalf of the De Anza College chapter of Phi Beta Lambda.\n\nWe are hosting DAIS 2026 on June 3rd and are seeking sponsors. With 60+ expected attendees, this is a great opportunity to connect with motivated business students.\n\nOur Gold Tier sponsorship ($1,000) includes logo placement, a 5-minute speaking slot, table presence at DAIS, and a newsletter feature.\n\nWould you be open to a brief call this week?\n\nWarm regards,\nJayden Pham\nPresident, De Anza PBL'},
@@ -3049,6 +3036,10 @@ function openEventDetail(id,bucket){
   if(!e.files)e.files=[];
   if(!e.attendees)e.attendees={};
   if(!e.attSheet)e.attSheet='';
+  if(!e.notes)e.notes='';
+  if(!e.checklist)e.checklist=[];
+  if(!e.vendorNames)e.vendorNames=[];
+  if(e.venueId===undefined)e.venueId=null;
   const memberChecklist=members.length
     ?members.map((m,mi)=>{
         const checked=!!e.attendees[mi];
@@ -3067,9 +3058,95 @@ function openEventDetail(id,bucket){
     row2(fld('Event Name',inp('ed-evname',e.name)),fld('Date',inp('ed-evdate',e.date)))+
     row2(fld('Location',inp('ed-evloc',e.loc)),fld('Attendance',`<input id="ed-evatt" type="number" value="${e.att}" style="background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:5px 8px;color:var(--t1);font-size:12px;width:100%;box-sizing:border-box;font-family:'IBM Plex Sans',sans-serif" readonly>`))+
     fld('Description & Notes',ta('ed-evdesc',e.desc,4))+
+    fld('Planning Notes / Ideas',ta('ed-evnotes',e.notes,4))+
+    sec('Venue &amp; Vendors',evVenueVendorHtml(e))+
+    sec('Staffing / Cue Sheet',evStaffingHtml(e,bucket))+
+    sec('Checklist',evChecklistHtml(e,bucket))+
+    sec('Budget',evBudgetHtml(e))+
+    sec('Run of Show',`<div style="font-size:11px;color:var(--t3);margin-bottom:8px">Build the timed schedule in the <a href="#" onclick="event.preventDefault();closeDetail();showPage('events');setTimeout(()=>{showTab('events','ros');switchRos('${e.name.replace(/'/g,"\\'")}');} ,50)" style="color:var(--grn);font-weight:600">Run of Show tab ↗</a></div>`)+
     sec('Attendance',sheetBar+`<div style="max-height:200px;overflow-y:auto;padding:2px 0">${memberChecklist}</div><div style="font-size:11px;color:var(--t3);margin-top:6px" id="ev-att-count">Checked in: ${Object.values(e.attendees).filter(Boolean).length} / ${members.length}</div>`)+
     sec('Linked Drive Files',`<div id="d-attached-files">${renderAttachedFiles(e.files)}</div><button class="btn btn-g btn-sm" style="margin-top:8px" onclick="toggleDrive()">Browse Drive</button>`)+
     `<div style="display:flex;gap:7px"><button class="btn btn-p btn-sm" onclick="saveEvent(${id},'${bucket}',this)">Save</button><button class="btn btn-g btn-sm" style="color:#E57373" onclick="eventsData['${bucket}']=eventsData['${bucket}'].filter(x=>x.id!==${id});renderEvents();closeDetail()">Delete</button></div>`,e);
+}
+function evVenueVendorHtml(e){
+  const venueOpts=['<option value="">— None —</option>'].concat(venues.map(v=>`<option value="${v.id}"${e.venueId===v.id?' selected':''}>${v.name}</option>`)).join('');
+  const vendorChecks=_vendors.length?_vendors.map(v=>`<label style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:11px;cursor:pointer"><input type="checkbox" class="ev-vendor-cb" value="${v.name.replace(/"/g,'&quot;')}" ${(e.vendorNames||[]).includes(v.name)?'checked':''}> ${v.name}</label>`).join(''):'<div style="font-size:11px;color:var(--t4)">No vendors in the directory yet — add some in the Vendors tab.</div>';
+  return fld('Venue',`<select id="ed-evvenue">${venueOpts}</select>`)+
+    `<div class="fg"><div class="fl">Vendors Used</div><div style="max-height:120px;overflow-y:auto">${vendorChecks}</div></div>`;
+}
+function evStaffingHtml(e,bucket){
+  const rows=volunteerSlots.filter(s=>s.eventId===e.id);
+  const list=rows.length?rows.map(s=>`<div class="tr" style="align-items:center">
+      <div style="flex:1"><span style="font-weight:600;font-size:11px">${s.role}</span> <span style="font-size:10px;color:var(--t3)">— ${s.assignee||'Unassigned'}</span></div>
+      <button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="delEvStaffRow(${e.id},'${bucket}',${s.id})">✕</button>
+    </div>`).join(''):'<div style="font-size:11px;color:var(--t4);padding:4px 0">No roles assigned yet.</div>';
+  return list+`<div style="display:flex;gap:6px;margin-top:8px">
+      <input id="ev-staff-role" type="text" placeholder="Role (e.g. Check-In)" style="flex:1;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
+      <input id="ev-staff-assignee" type="text" placeholder="Assignee" style="flex:1;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
+      <button class="btn btn-p btn-sm" onclick="addEvStaffRow(${e.id},'${bucket}')">+ Add</button>
+    </div>`;
+}
+function addEvStaffRow(id,bucket){
+  const e=eventsData[bucket].find(x=>x.id===id);if(!e)return;
+  const role=document.getElementById('ev-staff-role').value.trim();
+  const assignee=document.getElementById('ev-staff-assignee').value.trim();
+  if(!role)return;
+  volunteerSlots.push({id:nVS++,event:e.name,eventId:id,role,assignee,notes:''});
+  openEventDetail(id,bucket);
+}
+function delEvStaffRow(id,bucket,slotId){
+  volunteerSlots=volunteerSlots.filter(s=>s.id!==slotId);
+  openEventDetail(id,bucket);
+}
+function evChecklistHtml(e,bucket){
+  const pre=e.checklist.filter(c=>c.phase==='Pre');
+  const post=e.checklist.filter(c=>c.phase==='Post');
+  const row=c=>`<div class="tr" style="align-items:center">
+      <div class="tcb ${c.done?'done':''}" onclick="toggleEvChecklistItem(${e.id},'${bucket}',${c.id})"></div>
+      <div style="flex:1" class="tt ${c.done?'dk':''}">${c.item}</div>
+      <button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="delEvChecklistItem(${e.id},'${bucket}',${c.id})">✕</button>
+    </div>`;
+  return `<div style="font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Pre-Event</div>`+
+    (pre.length?pre.map(row).join(''):'<div style="font-size:11px;color:var(--t4);padding:2px 0">No items.</div>')+
+    `<div style="font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1px;text-transform:uppercase;margin:10px 0 4px">Post-Event</div>`+
+    (post.length?post.map(row).join(''):'<div style="font-size:11px;color:var(--t4);padding:2px 0">No items.</div>')+
+    `<div style="display:flex;gap:6px;margin-top:8px">
+      <input id="ev-check-item" type="text" placeholder="Checklist item" style="flex:1;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
+      <select id="ev-check-phase" style="font-size:11px;width:auto"><option value="Pre">Pre-Event</option><option value="Post">Post-Event</option></select>
+      <button class="btn btn-p btn-sm" onclick="addEvChecklistItem(${e.id},'${bucket}')">+ Add</button>
+    </div>`;
+}
+function addEvChecklistItem(id,bucket){
+  const e=eventsData[bucket].find(x=>x.id===id);if(!e)return;
+  if(!e.checklist)e.checklist=[];
+  const item=document.getElementById('ev-check-item').value.trim();if(!item)return;
+  const phase=document.getElementById('ev-check-phase').value;
+  const nid=(e.checklist.length?Math.max(...e.checklist.map(c=>c.id)):0)+1;
+  e.checklist.push({id:nid,item,phase,owner:'',done:false});
+  openEventDetail(id,bucket);
+}
+function toggleEvChecklistItem(id,bucket,itemId){
+  const e=eventsData[bucket].find(x=>x.id===id);if(!e||!e.checklist)return;
+  const c=e.checklist.find(x=>x.id===itemId);if(!c)return;
+  c.done=!c.done;
+  openEventDetail(id,bucket);
+}
+function delEvChecklistItem(id,bucket,itemId){
+  const e=eventsData[bucket].find(x=>x.id===id);if(!e||!e.checklist)return;
+  e.checklist=e.checklist.filter(x=>x.id!==itemId);
+  openEventDetail(id,bucket);
+}
+function evBudgetHtml(e){
+  const match=_roiEntries.find(r=>r.name.trim().toLowerCase()===e.name.trim().toLowerCase());
+  if(!match){
+    return `<div style="font-size:11px;color:var(--t4);margin-bottom:8px">No matching Finance entry for "${e.name}" yet.</div><button class="btn btn-g btn-sm" onclick="closeDetail();showPage('portal-finance');setTimeout(()=>{showTab('portal-finance','roi');renderROITable();},50)">Add in Finance ↗</button>`;
+  }
+  const net=match.rev-match.exp;
+  return `<div class="sg" style="grid-template-columns:repeat(3,1fr)">
+      <div class="sc"><div class="sl">Revenue</div><div class="sv">$${match.rev.toFixed(2)}</div></div>
+      <div class="sc"><div class="sl">Expenses</div><div class="sv">$${match.exp.toFixed(2)}</div></div>
+      <div class="sc"><div class="sl">Net</div><div class="sv" style="color:${net>=0?'var(--grn)':'var(--cr)'}">${net>=0?'+':''}$${net.toFixed(2)}</div></div>
+    </div><button class="btn btn-g btn-sm" style="margin-top:8px" onclick="closeDetail();showPage('portal-finance');setTimeout(()=>{showTab('portal-finance','roi');renderROITable();},50)">View in Finance ↗</button>`;
 }
 function toggleEvAtt(id,bucket,cb){
   const e=eventsData[bucket].find(x=>x.id===id);if(!e)return;
@@ -3090,8 +3167,11 @@ function saveEvSheet(id,bucket){
 function saveEvent(id,bucket,btn){
   const e=eventsData[bucket].find(x=>x.id===id);
   e.name=g('ed-evname');e.date=g('ed-evdate');e.loc=g('ed-evloc');
-  e.desc=g('ed-evdesc');
-  renderEvents();saved(btn);
+  e.desc=g('ed-evdesc');e.notes=g('ed-evnotes');
+  const venSel=document.getElementById('ed-evvenue');
+  e.venueId=venSel&&venSel.value?parseInt(venSel.value):null;
+  e.vendorNames=Array.from(document.querySelectorAll('.ev-vendor-cb:checked')).map(cb=>cb.value);
+  renderEvents();renderVenues();renderVendors();saved(btn);
   document.getElementById('d-title').textContent=e.name;
   document.getElementById('d-sub').textContent=e.date+' · '+e.loc;
 }
@@ -3230,6 +3310,18 @@ function renderEvents(){
   if(u)u.innerHTML=eventsData.upcoming.map(e=>`<div class="evc" onclick="openEventDetail(${e.id},'upcoming')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="evn">${e.name}</div><span class="badge bo">${e.date}</span></div><div class="evs"><div class="evst">Location: <span>${e.loc}</span></div><div class="evst">Est. Att: <span>${e.att}</span></div><div class="evst">Drive Files: <span>${e.files&&e.files.length?e.files.length+' linked':'None'}</span></div></div></div>`).join('');
   const p=document.getElementById('past-list');
   if(p)p.innerHTML=eventsData.past.map(e=>`<div class="evc" onclick="openEventDetail(${e.id},'past')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="evn">${e.name}</div><span class="badge bg">${e.date}</span></div><div class="evs"><div class="evst">Members: <span>${e.att}</span></div></div></div>`).join('');
+  renderOpsUpcoming();
+}
+function renderOpsUpcoming(){
+  const el=document.getElementById('portal-operations-events');if(!el)return;
+  const up=eventsData.upcoming.slice(0,4);
+  if(!up.length){el.innerHTML='<div style="font-size:11px;color:var(--t4);padding:8px 0">No upcoming events.</div>';return;}
+  el.innerHTML=up.map(e=>{
+    const openItems=(e.checklist||[]).filter(c=>!c.done).length;
+    return`<div class="tr" style="cursor:pointer" onclick="showPage('events');setTimeout(()=>openEventDetail(${e.id},'upcoming'),50)">
+      <div style="flex:1"><div class="tt">${e.name}</div><div class="tm">${e.date} &middot; ${e.loc}${openItems?` &middot; ${openItems} open checklist item${openItems!==1?'s':''}`:''}</div></div>
+    </div>`;
+  }).join('');
 }
 function renderTemplates(){
   rT('tmpl-proposals',templates.proposals,'proposals');
@@ -4426,19 +4518,23 @@ let venues=[
   {id:2,name:'MCC Conference Room',contact:'MCC Events Office',capacity:100,cost:'$200/day',status:'Inquired',notes:'Good for larger events. Check AV availability.'},
 ];let nVen=3;
 let volunteerSlots=[
-  {id:1,event:'DAIS 2026',role:'Check-In',assignee:'',notes:'2 people needed at entrance'},
-  {id:2,event:'DAIS 2026',role:'Room Monitor',assignee:'',notes:'One per competition room'},
-  {id:3,event:'DAIS 2026',role:'AV / Tech',assignee:'',notes:'Needs to know how to run projector'},
+  {id:1,event:'DAIS 2026',eventId:1,role:'Check-In',assignee:'',notes:'2 people needed at entrance'},
+  {id:2,event:'DAIS 2026',eventId:1,role:'Room Monitor',assignee:'',notes:'One per competition room'},
+  {id:3,event:'DAIS 2026',eventId:1,role:'AV / Tech',assignee:'',notes:'Needs to know how to run projector'},
 ];let nVS=4;
 
 function renderVenues(){
   const t=document.getElementById('venues-table');if(!t)return;
-  if(!venues.length){t.innerHTML=`<tr><td colspan="6" style="font-size:11px;color:var(--t4);padding:12px">No venues yet.</td></tr>`;return;}
+  if(!venues.length){t.innerHTML=`<tr><td colspan="7" style="font-size:11px;color:var(--t4);padding:12px">No venues yet.</td></tr>`;return;}
   const statusColor={Confirmed:'bg',Pending:'bo',Inquired:'bo',Unavailable:'br'};
-  t.innerHTML=venues.map(v=>`<tr class="cr" onclick="openVenueDetail(${v.id})">
+  const allEv=[...eventsData.upcoming,...eventsData.past];
+  t.innerHTML=venues.map(v=>{
+    const linked=allEv.find(e=>e.venueId===v.id);
+    return`<tr class="cr" onclick="openVenueDetail(${v.id})">
     <td class="nm">${v.name}</td><td>${v.contact}</td><td>${v.capacity}</td><td>${v.cost}</td>
     <td><span class="badge ${statusColor[v.status]||''}">${v.status}</span></td>
-    <td style="font-size:10px;color:var(--t4)">Edit</td></tr>`).join('');
+    <td style="font-size:10px;color:var(--t3)">${linked?linked.name:'—'}</td>
+    <td style="font-size:10px;color:var(--t4)">Edit</td></tr>`;}).join('');
 }
 function openVenueDetail(id){
   const v=venues.find(x=>x.id===id);if(!v)return;
@@ -5058,7 +5154,6 @@ let _delegations=JSON.parse(localStorage.getItem('pbl_delegation')||'[]');
 let _officerCheckins=JSON.parse(localStorage.getItem('pbl_officercheckins')||'[]');
 let _decisionLog=JSON.parse(localStorage.getItem('pbl_decisionlog')||'[]');
 let _memberPoints=JSON.parse(localStorage.getItem('pbl_memberpoints')||'[]');
-let _eventChecklists=JSON.parse(localStorage.getItem('pbl_eventchecklists')||'[]');
 let _vendors=JSON.parse(localStorage.getItem('pbl_vendors')||'[]');
 let _commsLog=JSON.parse(localStorage.getItem('pbl_commslog')||'[]');
 let _graphicRequests=JSON.parse(localStorage.getItem('pbl_graphicrequests')||'[]');
@@ -5105,7 +5200,6 @@ const PORTALS_CFG={
       {action:"showTab('portal-operations','kpis');renderKPIs()",label:'KPI Dashboard',desc:'Budget efficiency & attendance rates'},
       {action:"showTab('portal-operations','iccexcursions');renderICCExcursions()",label:'ICC Excursions',desc:'Field trips & ICC documentation'},
       {action:"showTab('portal-operations','venues')",label:'Venues',desc:'Room & venue tracker'},
-      {action:"showTab('portal-operations','eventchecklist');renderEventChecklists()",label:'Event Checklist',desc:'Pre & post event task lists'},
       {action:"showTab('portal-operations','vendors');renderVendors()",label:'Vendors',desc:'Vendor & contact directory'},
     ]
   },
@@ -5205,7 +5299,7 @@ async function saveData(){
     curriculum,brandKit,contentPosts,memberCheckIns,memberDb,mdbProgress,mdbPlacements,hubDocs,docFolders,
     compEvents,resources,eventSlides,lectureSlides,
     pblTransactions,merchSales,importedCalEvents,
-    nM,nE,nB,nT,nA,nEv,nEmail,nCon,nCli,nDel,nCR,nCE,nCH,nTr,nMin,nPr,nGoal,nTD,nAnn,nMP,nSp,nPl,nRos,
+    nM,nE,nB,nT,nA,nEv,nEmail,nCon,nCli,nDel,nCR,nCE,nCH,nTr,nMin,nPr,nGoal,nTD,nAnn,nMP,nSp,nPl,
     nEC,nReim,nVen,nVS,nCP,nCurr,nBKC,nBKF,nPost,nMCI,nPblTr,nMerch,nMDb
   };
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}
@@ -5291,7 +5385,6 @@ function loadData(){
     if(d.nMP!==undefined)nMP=d.nMP;
     if(d.nSp!==undefined)nSp=d.nSp;
     if(d.nPl!==undefined)nPl=d.nPl;
-    if(d.nRos!==undefined)nRos=d.nRos;
     if(d.nEC!==undefined)nEC=d.nEC;
     if(d.nReim!==undefined)nReim=d.nReim;
     if(d.nVen!==undefined)nVen=d.nVen;
@@ -5516,14 +5609,14 @@ document.querySelectorAll('.overlay').forEach(m=>m.addEventListener('click',func
 // INIT
 // RUN OF SHOW DATA
 let rosData={
-  'DAIS 2026':{sheetUrl:''}
-};let nRos=8;let currentRosEvent='DAIS 2026';
+  'DAIS 2026':{sheetUrl:'',rows:[]}
+};let currentRosEvent='DAIS 2026';
 
 function renderRos(){
   const sel=document.getElementById('ros-event-select');
+  const evNames=[...new Set([...eventsData.upcoming,...eventsData.past].map(e=>e.name).concat(Object.keys(rosData)))];
   if(sel){
-    const allEvents=[...new Set([...Object.keys(rosData)])];
-    sel.innerHTML='<option value="">Select Event...</option>'+allEvents.map(e=>`<option value="${e}"${e===currentRosEvent?' selected':''}>${e}</option>`).join('');
+    sel.innerHTML='<option value="">Select Event...</option>'+evNames.map(n=>`<option value="${n.replace(/"/g,'&quot;')}"${n===currentRosEvent?' selected':''}>${n}</option>`).join('');
   }
   const title=document.getElementById('ros-event-title');
   if(title)title.textContent=currentRosEvent||'Run of Show';
@@ -5531,44 +5624,64 @@ function renderRos(){
   const entry=rosData[currentRosEvent];
   const sheetUrl=entry&&entry.sheetUrl||'';
   if(urlInput)urlInput.value=sheetUrl;
-  const t=document.getElementById('ros-table');
-  if(!t)return;
-  if(sheetUrl){
-    const embedUrl=sheetUrl.replace('/edit','').replace(/\/pub(\?.*)?$/,'')+'/preview';
-    t.innerHTML=`<iframe src="${embedUrl}" style="width:100%;height:600px;border:1px solid var(--bd);border-radius:6px;margin-top:4px" frameborder="0" allowfullscreen></iframe>`;
-  } else if(currentRosEvent){
-    t.innerHTML=`<div style="color:var(--t4);font-size:12px;padding:24px 0 8px">No sheet linked yet. Paste a Google Sheets URL above and click <strong>Embed</strong>.</div>`;
-  } else {
-    t.innerHTML=`<div style="color:var(--t4);font-size:12px;padding:24px 0 8px">Select or create an event to get started.</div>`;
+  renderRosSchedule();
+  const sheetWrap=document.getElementById('ros-sheet-embed');
+  if(sheetWrap){
+    if(sheetUrl){
+      const embedUrl=sheetUrl.replace('/edit','').replace(/\/pub(\?.*)?$/,'')+'/preview';
+      sheetWrap.innerHTML=`<iframe src="${embedUrl}" style="width:100%;height:500px;border:1px solid var(--bd);border-radius:6px;margin-top:4px" frameborder="0" allowfullscreen></iframe>`;
+    } else {
+      sheetWrap.innerHTML='';
+    }
   }
+}
+function renderRosSchedule(){
+  const t=document.getElementById('ros-rows-table');if(!t)return;
+  if(!currentRosEvent){t.innerHTML='<tr><td colspan="6" style="font-size:11px;color:var(--t4);padding:12px">Select an event to build its schedule.</td></tr>';return;}
+  if(!rosData[currentRosEvent])rosData[currentRosEvent]={sheetUrl:'',rows:[]};
+  if(!rosData[currentRosEvent].rows)rosData[currentRosEvent].rows=[];
+  const rows=rosData[currentRosEvent].rows;
+  if(!rows.length){t.innerHTML='<tr><td colspan="6" style="font-size:11px;color:var(--t4);padding:12px">No schedule rows yet. Click + Add Row to start building the run of show.</td></tr>';return;}
+  const is="width:100%;background:transparent;border:none;font-size:11px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none;padding:2px 4px;box-sizing:border-box";
+  t.innerHTML=rows.map(r=>`<tr>
+    <td><input value="${(r.day||'').replace(/"/g,'&quot;')}" placeholder="Day 1" style="${is}" onchange="updateRosRow(${r.id},'day',this.value)"></td>
+    <td><input value="${(r.start||'').replace(/"/g,'&quot;')}" placeholder="9:00 AM" style="${is}" onchange="updateRosRow(${r.id},'start',this.value)"></td>
+    <td><input value="${(r.end||'').replace(/"/g,'&quot;')}" placeholder="9:30 AM" style="${is}" onchange="updateRosRow(${r.id},'end',this.value)"></td>
+    <td><input value="${(r.item||'').replace(/"/g,'&quot;')}" placeholder="Check-in" style="${is}" onchange="updateRosRow(${r.id},'item',this.value)"></td>
+    <td><input value="${(r.owner||'').replace(/"/g,'&quot;')}" placeholder="Owner" style="${is}" onchange="updateRosRow(${r.id},'owner',this.value)"></td>
+    <td><button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="deleteRosRow(${r.id})">✕</button></td>
+  </tr>`).join('');
+}
+function addRosRow(){
+  if(!currentRosEvent){alert('Select an event first.');return;}
+  if(!rosData[currentRosEvent])rosData[currentRosEvent]={sheetUrl:'',rows:[]};
+  if(!rosData[currentRosEvent].rows)rosData[currentRosEvent].rows=[];
+  const rows=rosData[currentRosEvent].rows;
+  const nid=(rows.length?Math.max(...rows.map(r=>r.id)):0)+1;
+  rows.push({id:nid,day:'Day 1',start:'',end:'',item:'',owner:''});
+  saveData();renderRosSchedule();
+}
+function updateRosRow(id,field,value){
+  if(!currentRosEvent||!rosData[currentRosEvent]||!rosData[currentRosEvent].rows)return;
+  const r=rosData[currentRosEvent].rows.find(x=>x.id===id);if(!r)return;
+  r[field]=value;saveData();
+}
+function deleteRosRow(id){
+  if(!currentRosEvent||!rosData[currentRosEvent]||!rosData[currentRosEvent].rows)return;
+  rosData[currentRosEvent].rows=rosData[currentRosEvent].rows.filter(x=>x.id!==id);
+  saveData();renderRosSchedule();
 }
 function switchRos(eventName){
   if(!eventName)return;
   currentRosEvent=eventName;
-  if(!rosData[eventName])rosData[eventName]={sheetUrl:''};
+  if(!rosData[eventName])rosData[eventName]={sheetUrl:'',rows:[]};
   renderRos();
-}
-function addRosEvent(){
-  const name=prompt('Event name:');
-  if(!name||!name.trim())return;
-  const n=name.trim();
-  if(rosData[n]){currentRosEvent=n;renderRos();return;}
-  rosData[n]={sheetUrl:''};
-  currentRosEvent=n;
-  saveData();renderRos();
-}
-function removeRosEvent(){
-  if(!currentRosEvent){alert('Select an event first.');return;}
-  if(!confirm('Remove "'+currentRosEvent+'"?'))return;
-  delete rosData[currentRosEvent];
-  currentRosEvent=Object.keys(rosData)[0]||'';
-  saveData();renderRos();
 }
 function setRosSheet(){
   if(!currentRosEvent){alert('Select an event first.');return;}
   const url=document.getElementById('ros-url-input').value.trim();
   if(!url){alert('Paste a Google Sheets URL first.');return;}
-  if(!rosData[currentRosEvent])rosData[currentRosEvent]={sheetUrl:''};
+  if(!rosData[currentRosEvent])rosData[currentRosEvent]={sheetUrl:'',rows:[]};
   rosData[currentRosEvent].sheetUrl=url;
   saveData();renderRos();
 }
@@ -5943,7 +6056,6 @@ async function _loadSupabaseData(){
   if(d.nMP!==undefined)nMP=d.nMP;
   if(d.nSp!==undefined)nSp=d.nSp;
   if(d.nPl!==undefined)nPl=d.nPl;
-  if(d.nRos!==undefined)nRos=d.nRos;
   if(d.nEC!==undefined)nEC=d.nEC;
   if(d.nReim!==undefined)nReim=d.nReim;
   if(d.nVen!==undefined)nVen=d.nVen;
@@ -6631,7 +6743,7 @@ function renderConfLogistics(){
 function deleteConfLogistic(i){_confLogistics.splice(i,1);saveRoleData('conflogistics',_confLogistics);renderConfLogistics();}
 
 // ── KPI DASHBOARD ──
-function addKPIEntry(){openModal('kpi-modal');}
+function addKPIEntry(){openModal('kpi-modal');document.getElementById('kpi-events').value=eventsData.past.length;}
 function submitKPI(){
   const period=document.getElementById('kpi-period').value.trim();if(!period)return;
   const budEff=parseFloat(document.getElementById('kpi-budeff').value)||0;
@@ -7531,48 +7643,25 @@ function submitMemberPoints(){
 function deleteMemberPoints(name){const i=_memberPoints.findIndex(m=>m.name===name);if(i>=0){_memberPoints.splice(i,1);saveRoleData('memberpoints',_memberPoints);renderMemberPoints();}}
 
 // ── EVENT CHECKLISTS ──────────────────────────────────────────────────────────
-function addEventChecklist(){openModal('event-checklist-modal');document.getElementById('ec-date').value=new Date().toISOString().slice(0,10);}
-function renderEventChecklists(){
-  const t=document.getElementById('event-checklist-table');if(!t)return;
-  if(!_eventChecklists.length){t.innerHTML='<tr><td colspan="7" style="font-size:11px;color:var(--t4);padding:12px">No event checklists yet.</td></tr>';return;}
-  const sc={['Pre-Event']:'bo',['In Progress']:'bo',['Post-Event']:'bo',Completed:'bg'};
-  t.innerHTML=_eventChecklists.map((e,i)=>`<tr>
-    <td style="font-weight:600">${e.event}</td><td>${e.date||'—'}</td>
-    <td style="font-size:10px;color:var(--t3);max-width:140px">${e.pre||'—'}</td>
-    <td style="font-size:10px;color:var(--t3);max-width:140px">${e.post||'—'}</td>
-    <td>${e.owner||'—'}</td>
-    <td><span class="badge ${sc[e.status]||'bo'}">${e.status}</span></td>
-    <td><button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="deleteEventChecklist(${i})">✕</button></td>
-  </tr>`).join('');
-}
-function submitEventChecklist(){
-  const event=document.getElementById('ec-event').value.trim();if(!event)return;
-  const date=document.getElementById('ec-date').value;
-  const pre=document.getElementById('ec-pre').value.trim();
-  const post=document.getElementById('ec-post').value.trim();
-  const owner=document.getElementById('ec-owner').value.trim();
-  const status=document.getElementById('ec-status').value;
-  _eventChecklists.push({event,date,pre,post,owner,status});
-  saveRoleData('eventchecklists',_eventChecklists);renderEventChecklists();closeModals();
-  ['ec-event','ec-pre','ec-post','ec-owner'].forEach(id=>document.getElementById(id).value='');
-}
-function deleteEventChecklist(i){_eventChecklists.splice(i,1);saveRoleData('eventchecklists',_eventChecklists);renderEventChecklists();}
-
 // ── VENDOR DIRECTORY ──────────────────────────────────────────────────────────
 function addVendorEntry(){openModal('vendor-modal');}
 function renderVendors(){
   const t=document.getElementById('vendors-directory-table');if(!t)return;
-  if(!_vendors.length){t.innerHTML='<tr><td colspan="8" style="font-size:11px;color:var(--t4);padding:12px">No vendors added yet.</td></tr>';return;}
-  t.innerHTML=_vendors.map((v,i)=>`<tr>
+  if(!_vendors.length){t.innerHTML='<tr><td colspan="9" style="font-size:11px;color:var(--t4);padding:12px">No vendors added yet.</td></tr>';return;}
+  const allEv=[...eventsData.upcoming,...eventsData.past];
+  t.innerHTML=_vendors.map((v,i)=>{
+    const usedIn=allEv.filter(e=>e.vendorNames&&e.vendorNames.includes(v.name)).map(e=>e.name);
+    return`<tr>
     <td style="font-weight:600">${v.name}</td>
     <td><span class="badge bo">${v.category}</span></td>
     <td>${v.contact||'—'}</td>
     <td style="font-size:10px;color:var(--t3)">${v.reach||'—'}</td>
     <td>${v.lastused||'—'}</td>
     <td>${v.rating||'—'}</td>
+    <td style="font-size:10px;color:var(--t3)">${usedIn.length?usedIn.join(', '):'—'}</td>
     <td style="font-size:10px;color:var(--t3);max-width:140px">${v.notes||'—'}</td>
     <td><button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="deleteVendor(${i})">✕</button></td>
-  </tr>`).join('');
+  </tr>`;}).join('');
 }
 function submitVendor(){
   const name=document.getElementById('vnd-name').value.trim();if(!name)return;
