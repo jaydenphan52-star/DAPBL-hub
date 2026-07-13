@@ -460,6 +460,9 @@ textarea{resize:vertical;min-height:120px;}
       <div class="ni" onclick="showPage('events')">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1"/><path d="M5 1v4M11 1v4M2 7h12"/></svg>Events
       </div>
+      <div class="ni" onclick="showPage('agendas');renderAgendasHub()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 6h6M5 9h6M5 12h3"/><path d="M2 4h12"/></svg>Agendas
+      </div>
     </div>
     <div class="nav-group">
       <div class="ngl">Resources</div>
@@ -694,6 +697,22 @@ textarea{resize:vertical;min-height:120px;}
         <div class="sub" id="tasks-general">
           <div class="card"><div class="ch"><div class="ct">General Tasks</div><div style="display:flex;gap:6px"><button class="btn-csv" onclick="openImportDataModal('general')">Import CSV</button><button class="btn btn-p btn-sm" onclick="openTaskModal('general')">+ Add Task</button></div></div><div id="general-tasks"></div></div>
         </div>
+      </div>
+
+      <!-- AGENDAS HUB -->
+      <div class="page" id="page-agendas">
+        <div id="pa-list-view">
+          <div class="card" style="margin-bottom:14px">
+            <div class="ch">
+              <div class="ct">Agendas</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-p btn-sm" onclick="newPresAgenda()">+ New Meeting</button>
+              </div>
+            </div>
+            <div id="pres-agendas-list" style="padding:0 16px 16px"></div>
+          </div>
+        </div>
+        <div id="pa-detail-view" style="display:none"></div>
       </div>
 
       <!-- EVENTS -->
@@ -1751,7 +1770,7 @@ textarea{resize:vertical;min-height:120px;}
         <div class="tabs">
           <div class="tab active" onclick="showTab('portal-president','overview')">Overview</div>
           <div class="tab" onclick="showTab('portal-president','conferences');renderConfDues()">Conference Tracker</div>
-          <div class="tab" onclick="showTab('portal-president','agendas');renderAgendasHub()">Agendas</div>
+          <div class="tab" onclick="showPage('agendas');renderAgendasHub()">Agendas &#8599;</div>
           <div class="tab" onclick="showTab('portal-president','delegation');renderDelegation()">Board Delegation</div>
           <div class="tab" onclick="showTab('portal-president','officercheckins');renderOfficerCheckins()">Officer Check-Ins</div>
           <div class="tab" onclick="showTab('portal-president','decisions');renderDecisionLog()">Decision Log</div>
@@ -1773,21 +1792,6 @@ textarea{resize:vertical;min-height:120px;}
           </div>
         </div>
 
-        <!-- AGENDAS TAB -->
-        <div class="sub" id="portal-president-agendas">
-          <div id="pa-list-view">
-            <div class="card" style="margin-bottom:14px">
-              <div class="ch">
-                <div class="ct">Agendas</div>
-                <div style="display:flex;gap:6px">
-                  <button class="btn btn-p btn-sm" onclick="newPresAgenda()">+ New Meeting</button>
-                </div>
-              </div>
-              <div id="pres-agendas-list" style="padding:0 16px 16px"></div>
-            </div>
-          </div>
-          <div id="pa-detail-view" style="display:none"></div>
-        </div>
 
         <!-- BOARD DELEGATION TAB -->
         <div class="sub" id="portal-president-delegation">
@@ -1957,6 +1961,13 @@ textarea{resize:vertical;min-height:120px;}
     <div class="fr"><div class="fg"><div class="fl">Assigned To</div><select id="t-owner"></select></div><div class="fg"><div class="fl">Due Date</div><input id="t-due" type="date"></div></div>
     <div class="fg"><div class="fl">Notes</div><textarea id="t-notes"></textarea></div>
     <div class="mf"><button class="btn btn-g" onclick="closeModals()">Cancel</button><button class="btn btn-p" onclick="addTask()">Add Task</button></div>
+  </div>
+</div>
+<div class="overlay" id="sendtasks-modal">
+  <div class="modal" style="max-width:560px"><div class="mt">Send to Task Boards</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:4px">Action items found in this meeting, grouped by department. Uncheck anything you don't want, then confirm.</div>
+    <div id="sendtasks-body" style="max-height:340px;overflow-y:auto;margin-bottom:10px"></div>
+    <div class="mf"><button class="btn btn-g" onclick="closeModals()">Cancel</button><button class="btn btn-p" onclick="confirmSendTasks()">Create Tasks</button></div>
   </div>
 </div>
 <div class="overlay" id="agendapres-modal">
@@ -2980,7 +2991,7 @@ function saveBc(id,btn){
 function openTaskDetail(id,board){
   const t=[...tasks.ebod,...tasks.general].find(x=>x.id===id);
   const owners=['President','VP Events','VP Education','VP Operations','Secretary','Treasurer','Dir. Marketing','Dir. Design'];
-  const cats=['Events','Sponsors','Competition','Education','Marketing','Design','General','Operations'];
+  const cats=['Events','Sponsors','Competition','Education','Marketing','Design','General','Operations','Finance','Strategy','Club Affairs','Leadership'];
   openDetail(t.text,'Due '+t.due+' · '+t.owner,
     fld('Task Text',inp('ed-ttext',t.text))+
     row2(fld('Owner',sel('ed-towner',owners,t.owner)),fld('Due Date',inp('ed-tdue',t.due)))+
@@ -5255,7 +5266,7 @@ const PORTALS_CFG={
     },
     links:[
       {action:"showTab('portal-president','conferences');renderConfDues()",label:'Conf. Dues',desc:'Track payment status per conference'},
-      {action:"showTab('portal-president','agendas');renderAgendasHub()",label:'Agendas',desc:'Attendance, agenda & topic notes'},
+      {action:"showPage('agendas');renderAgendasHub()",label:'Agendas',desc:'Attendance, agenda & topic notes'},
       {action:"showTab('portal-president','delegation');renderDelegation()",label:'Board Delegation',desc:'Cross-functional deliverables tracker'},
       {action:"showTab('portal-president','officercheckins');renderOfficerCheckins()",label:'Officer Check-Ins',desc:'Officer attendance & 1-on-1 log'},
       {action:"showTab('portal-president','decisions');renderDecisionLog()",label:'Decision Log',desc:'Board decisions & rationale'},
@@ -5425,7 +5436,7 @@ function gsSearch(q){
   const vRes=venues.filter(v=>v.name.toLowerCase().includes(lq)).slice(0,cap);
   if(vRes.length)sections.push({cat:'Venues',items:vRes.map(v=>({label:v.name,sub:v.status,page:'portal-operations'}))});
   const agRes=_presAgendas.filter(a=>(a.title||'').toLowerCase().includes(lq)).slice(0,cap);
-  if(agRes.length)sections.push({cat:'Agendas',items:agRes.map(a=>({label:a.title||'Meeting',sub:a.date,page:'portal-president'}))});
+  if(agRes.length)sections.push({cat:'Agendas',items:agRes.map(a=>({label:a.title||'Meeting',sub:a.date,page:'agendas'}))});
   if(!sections.length){drop.innerHTML='<div class="gs-item" style="color:var(--t4)">No results</div>';drop.classList.add('open');return;}
   drop.innerHTML=sections.map(s=>`<div class="gs-cat">${s.cat}</div>`+s.items.map(it=>`<div class="gs-item" onclick="gsGo('${it.page}')"><span style="font-weight:500">${it.label}</span>${it.sub?`<span style="font-size:10px;color:var(--t3);margin-left:6px">${it.sub}</span>`:''}</div>`).join('')).join('');
   drop.classList.add('open');
@@ -5506,7 +5517,7 @@ function renderCalendar(){
   _presAgendas.forEach(a=>{
     if(!a.date)return;
     const dd=new Date(a.date+'T00:00');
-    if(!isNaN(dd))addItem(dd.toLocaleDateString('en-US',{month:'short',day:'numeric'}),'ag',a.title||'Meeting','portal-president');
+    if(!isNaN(dd))addItem(dd.toLocaleDateString('en-US',{month:'short',day:'numeric'}),'ag',a.title||'Meeting','agendas');
   });
   if(importedCalEvents)importedCalEvents.forEach(e=>addItem(e.date,'ev','📅 '+e.name,'calendar'));
   let html='';
@@ -5558,6 +5569,7 @@ const META={
   mentorship:['Mentor / Mentee','Pair tracking & check-ins'],
   bootcamps:['Bootcamps','Session notes & attendance'],
   tasks:['Tasks','EBOD & general task boards'],
+  agendas:['Agendas','Meeting attendance, agendas & topic notes'],
   events:['Events','Upcoming, past & run of show'],
   templates:['Templates','Proposals, resources & timelines'],
   sponsors:['Finance','Sponsors, pipeline & email history'],
@@ -5581,6 +5593,7 @@ function showPage(id){
   const m=META[id];
   if(m){document.getElementById('page-title').textContent=m[0];document.getElementById('page-sub').textContent=m[1];}
   if(PORTALS_CFG[id])renderPortals();
+  if(id==='agendas')renderAgendasHub();
 }
 function showTab(page,tab){
   const appEl=document.getElementById('app-ebod');
@@ -7236,6 +7249,7 @@ function renderAgendaDetailView(){
         <option${a.status==='Draft'?' selected':''}>Draft</option>
         <option${a.status==='Final'?' selected':''}>Final</option>
       </select>
+      <button class="btn btn-p btn-sm" onclick="openSendTasksModal(${i})">Send to Task Boards</button>
       <button class="btn btn-g btn-sm" onclick="window.print()">Print</button>
       <button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="deleteAgendaMeeting('pres',${i});backToAgendasList()">Delete</button>
     </div>
@@ -7363,6 +7377,90 @@ function _paRemoveItem(i,ii){if(!_presAgendas[i])return;_presAgendas[i].agendaIt
 function _paAddMbm(i){if(!_presAgendas[i])return;if(!_presAgendas[i].minuteByMinute)_presAgendas[i].minuteByMinute=[];_presAgendas[i].minuteByMinute.push({time:'',item:''});saveRoleData('agendas',_presAgendas);renderPaTabBody();}
 function _paRemoveMbm(i,mi){if(!_presAgendas[i])return;_presAgendas[i].minuteByMinute.splice(mi,1);saveRoleData('agendas',_presAgendas);renderPaTabBody();}
 function _paMbmField(i,mi,k,v){if(_presAgendas[i]&&_presAgendas[i].minuteByMinute[mi])_presAgendas[i].minuteByMinute[mi][k]=v;saveRoleData('agendas',_presAgendas);}
+
+// ── SEND MEETING ACTION ITEMS TO TASK BOARDS ──
+function _deptFromPosition(pos){
+  const p=(pos||'').toLowerCase();
+  if(p.includes('operation'))return'Operations';
+  if(p.includes('financ')||p.includes('treasurer'))return'Finance';
+  if(p.includes('market'))return'Marketing';
+  if(p.includes('strategy')||p.includes('development'))return'Strategy';
+  if(p.includes('club affairs'))return'Club Affairs';
+  if(p.includes('president')||p.includes('secretary'))return'Leadership';
+  if(p.includes('design'))return'Design';
+  return'General';
+}
+function _resolveOfficer(nameFragment){
+  const fn=(nameFragment||'').trim().toLowerCase();
+  if(!fn)return null;
+  return execTeam.find(e=>e.name.toLowerCase()===fn)||execTeam.find(e=>e.name.toLowerCase().split(' ')[0]===fn)||execTeam.find(e=>e.name.toLowerCase().startsWith(fn))||null;
+}
+function collectMeetingActionItems(a){
+  const items=[];
+  const pushed=(a.pushedTasks||[]).map(s=>s.toLowerCase());
+  const norm=s=>s.trim().toLowerCase();
+  const add=(text,person,source)=>{
+    const t=String(text||'').replace(/^[-•*\d.)\s]+/,'').trim();
+    if(!t)return;
+    if(pushed.includes(norm(t)))return;
+    if(items.some(x=>norm(x.text)===norm(t)))return;
+    const off=_resolveOfficer(person);
+    items.push({text:t,officer:off?off.name:(person||'Unassigned'),dept:off?_deptFromPosition(off.position):'General',source});
+  };
+  (a.taskList||[]).forEach(tl=>{
+    const lines=Array.isArray(tl.items)?tl.items:String(tl.items||'').split('\n');
+    lines.forEach(l=>add(l,tl.person,'Task list'));
+  });
+  (a.agendaItems||[]).forEach(it=>{
+    const txt=Array.isArray(it.discussionItems)?it.discussionItems.join('\n'):String(it.discussionItems||'');
+    txt.split('\n').forEach(line=>{
+      const l=line.replace(/^[-•*\d.)\s]+/,'').trim();
+      if(!l)return;
+      const m=l.match(/^([A-Za-z]+)\s*(?:to\s+|will\s+|:\s*|—\s*|-\s+)(.+)/);
+      if(!m)return;
+      if(!_resolveOfficer(m[1]))return;
+      add(l,m[1],'Topic: '+(it.title||'Untitled'));
+    });
+  });
+  return items;
+}
+let _stItems=[];let _stMeetingIdx=null;
+function openSendTasksModal(i){
+  const a=_presAgendas[i];if(!a)return;
+  _stMeetingIdx=i;
+  _stItems=collectMeetingActionItems(a);
+  const box=document.getElementById('sendtasks-body');
+  if(!_stItems.length){
+    box.innerHTML='<div style="font-size:11px;color:var(--t4);padding:10px 0">No new action items found. Add lines under people in the Task List, or write topic notes like "Addy to confirm venue by Friday".</div>';
+  }else{
+    const groups={};
+    _stItems.forEach((it,idx)=>{if(!groups[it.dept])groups[it.dept]=[];groups[it.dept].push({...it,idx});});
+    box.innerHTML=Object.entries(groups).map(([dept,rows])=>
+      `<div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin:10px 0 4px">${dept}</div>`+
+      rows.map(r=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:11px;cursor:pointer;border-bottom:1px solid var(--bd)">
+        <input type="checkbox" class="st-cb" data-idx="${r.idx}" checked style="margin-top:2px;width:auto;flex-shrink:0">
+        <span style="flex:1">${r.text}<span style="display:block;font-size:9px;color:var(--t4)">${r.officer} · ${r.source}</span></span>
+      </label>`).join('')
+    ).join('');
+  }
+  openModal('sendtasks-modal');
+}
+function confirmSendTasks(){
+  const a=_presAgendas[_stMeetingIdx];if(!a)return;
+  if(!a.pushedTasks)a.pushedTasks=[];
+  const checked=Array.from(document.querySelectorAll('.st-cb:checked')).map(cb=>parseInt(cb.dataset.idx));
+  const dateLbl=a.date?new Date(a.date+'T00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+  let n=0;
+  checked.forEach(idx=>{
+    const it=_stItems[idx];if(!it)return;
+    tasks.ebod.push({id:nT++,text:it.text,owner:it.officer,due:'TBD',cat:it.dept,done:false,notes:'From meeting: '+(a.title||'Meeting')+(dateLbl?' ('+dateLbl+')':''),files:[]});
+    a.pushedTasks.push(it.text.trim().toLowerCase());
+    n++;
+  });
+  saveRoleData('agendas',_presAgendas);
+  renderTasks();renderPortals();saveData();closeModals();
+  alert(n+' task'+(n!==1?'s':'')+' sent to the EBOD task board.');
+}
 
 function renderDelegation(){
   const t=document.getElementById('delegation-table');if(!t)return;
