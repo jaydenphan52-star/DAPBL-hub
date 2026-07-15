@@ -717,37 +717,16 @@ textarea{resize:vertical;min-height:120px;}
 
       <!-- EVENTS -->
       <div class="page" id="page-events">
-        <div class="tabs">
-          <div class="tab active" onclick="showTab('events','upcoming')">Upcoming</div>
-          <div class="tab" onclick="showTab('events','past')">Past Events</div>
-          <div class="tab" onclick="showTab('events','ros');renderRos()">Run of Show</div>
-        </div>
-        <div class="sub active" id="events-upcoming">
-          <div class="ch" style="margin-bottom:10px"><div class="ct">Upcoming Events</div><button class="btn btn-p btn-sm" onclick="openModal('ev-modal')">+ Add Event</button></div>
-          <div id="upcoming-list"></div>
-        </div>
-        <div class="sub" id="events-past">
-          <div class="ch" style="margin-bottom:10px"><div class="ct">Past Events</div><button class="btn btn-p btn-sm" onclick="openModal('ev-modal')">+ Add Event</button></div>
-          <div id="past-list"></div>
-        </div>
-        <div class="sub" id="events-ros">
-          <div class="card">
-            <div class="ch"><div class="ct" id="ros-event-title">Run of Show</div><select id="ros-event-select" onchange="switchRos(this.value)" style="font-size:10px;padding:3px 7px;width:auto"><option value="">Select Event...</option></select></div>
-            <div style="font-size:10px;color:var(--t4);margin-bottom:10px">Events are added from the Upcoming tab. Build the timed schedule below.</div>
-            <table><thead><tr><th style="width:70px">Day</th><th style="width:80px">Start</th><th style="width:80px">End</th><th>Item / Activity</th><th style="width:130px">Owner</th><th></th></tr></thead>
-            <tbody id="ros-rows-table"></tbody></table>
-            <button class="btn btn-g btn-sm" style="margin-top:10px" onclick="addRosRow()">+ Add Row</button>
-          </div>
-          <div class="card" style="margin-top:14px">
-            <div class="ch"><div class="ct" style="font-size:11px">Or Embed a Google Sheet Instead</div></div>
-            <div id="ros-sheet-bar" style="display:flex;gap:7px;align-items:center;margin-bottom:10px">
-              <input id="ros-url-input" type="text" placeholder="Paste Google Sheets URL…" style="flex:1;font-size:11px;padding:6px 9px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
-              <button class="btn btn-p btn-sm" onclick="setRosSheet()">Embed</button>
-              <button class="btn btn-g btn-sm" style="color:#E57373" onclick="clearRosSheet()">Clear</button>
+        <div id="ev-list-view">
+          <div class="card" style="margin-bottom:14px">
+            <div class="ch">
+              <div style="display:flex;gap:6px;align-items:center" id="ev-filter-chips"></div>
+              <button class="btn btn-p btn-sm" onclick="openModal('ev-modal')">+ Add Event</button>
             </div>
-            <div id="ros-sheet-embed"></div>
+            <div id="events-cards-list" style="padding:0 16px 16px"></div>
           </div>
         </div>
+        <div id="ev-detail-view" style="display:none"></div>
       </div>
 
       <!-- TEMPLATES -->
@@ -3030,49 +3009,205 @@ function saveAgenda(id,btn){
   document.getElementById('d-sub').textContent=a.date+' · '+a.status;
 }
 
-// EVENT EDIT
-function openEventDetail(id,bucket){
-  const e=eventsData[bucket].find(x=>x.id===id);
-  if(!e.files)e.files=[];
-  if(!e.attendees)e.attendees={};
-  if(!e.attSheet)e.attSheet='';
-  if(!e.notes)e.notes='';
-  if(!e.checklist)e.checklist=[];
-  if(!e.vendorNames)e.vendorNames=[];
-  if(e.venueId===undefined)e.venueId=null;
-  const memberChecklist=members.length
-    ?members.map((m,mi)=>{
-        const checked=!!e.attendees[mi];
-        return`<label style="display:flex;align-items:center;gap:7px;padding:3px 0;font-size:12px;cursor:pointer">
-          <input type="checkbox" data-mi="${mi}" ${checked?'checked':''} onchange="toggleEvAtt(${id},'${bucket}',this)">
-          <span>${m.first} ${m.last}</span><span style="color:var(--t4);font-size:10px">${m.role||''}</span>
-        </label>`;
-      }).join('')
-    :'<span style="color:var(--t4);font-size:11px">No members added yet.</span>';
-  const sheetBar=`<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
-    <input id="ev-att-sheet" type="text" value="${e.attSheet||''}" placeholder="Paste Google Sheets sign-in URL…" style="flex:1;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
-    <button class="btn btn-g btn-sm" onclick="saveEvSheet(${id},'${bucket}')">Save</button>
-    ${e.attSheet?`<a href="${e.attSheet}" target="_blank" class="btn btn-p btn-sm" style="text-decoration:none">Open ↗</a>`:''}
-  </div>`;
-  openDetail(e.name,e.date+' · '+e.loc,
-    row2(fld('Event Name',inp('ed-evname',e.name)),fld('Date',inp('ed-evdate',e.date)))+
-    row2(fld('Location',inp('ed-evloc',e.loc)),fld('Attendance',`<input id="ed-evatt" type="number" value="${e.att}" style="background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:5px 8px;color:var(--t1);font-size:12px;width:100%;box-sizing:border-box;font-family:'IBM Plex Sans',sans-serif" readonly>`))+
-    fld('Description & Notes',ta('ed-evdesc',e.desc,4))+
-    fld('Planning Notes / Ideas',ta('ed-evnotes',e.notes,4))+
-    sec('Venue &amp; Vendors',evVenueVendorHtml(e))+
-    sec('Staffing / Cue Sheet',evStaffingHtml(e,bucket))+
-    sec('Checklist',evChecklistHtml(e,bucket))+
-    sec('Budget',evBudgetHtml(e))+
-    sec('Run of Show',`<div style="font-size:11px;color:var(--t3);margin-bottom:8px">Build the timed schedule in the <a href="#" onclick="event.preventDefault();closeDetail();showPage('events');setTimeout(()=>{showTab('events','ros');switchRos('${e.name.replace(/'/g,"\\'")}');} ,50)" style="color:var(--grn);font-weight:600">Run of Show tab ↗</a></div>`)+
-    sec('Attendance',sheetBar+`<div style="max-height:200px;overflow-y:auto;padding:2px 0">${memberChecklist}</div><div style="font-size:11px;color:var(--t3);margin-top:6px" id="ev-att-count">Checked in: ${Object.values(e.attendees).filter(Boolean).length} / ${members.length}</div>`)+
-    sec('Linked Drive Files',`<div id="d-attached-files">${renderAttachedFiles(e.files)}</div><button class="btn btn-g btn-sm" style="margin-top:8px" onclick="toggleDrive()">Browse Drive</button>`)+
-    `<div style="display:flex;gap:7px"><button class="btn btn-p btn-sm" onclick="saveEvent(${id},'${bucket}',this)">Save</button><button class="btn btn-g btn-sm" style="color:#E57373" onclick="eventsData['${bucket}']=eventsData['${bucket}'].filter(x=>x.id!==${id});renderEvents();closeDetail()">Delete</button></div>`,e);
+// EVENTS HUB — list + full-page detail
+let _evOpenId=null;let _evOpenBucket='upcoming';let _evTab='overview';let _evFilter='upcoming';let _evAttSearch='';
+function _evCur(){return(eventsData[_evOpenBucket]||[]).find(x=>x.id===_evOpenId);}
+function evReadiness(e){
+  const cl=e.checklist||[];
+  const st=volunteerSlots.filter(s=>s.eventId===e.id);
+  const checkDone=cl.filter(c=>c.done).length;
+  const staffFilled=st.filter(s=>s.assignee&&String(s.assignee).trim()).length;
+  const tot=cl.length+st.length;
+  const pct=tot?Math.round((checkDone+staffFilled)/tot*100):null;
+  const venue=e.venueId!=null?venues.find(v=>v.id===e.venueId):null;
+  return{checkDone,checkTot:cl.length,staffFilled,staffTot:st.length,venue,pct};
 }
-function evVenueVendorHtml(e){
-  const venueOpts=['<option value="">— None —</option>'].concat(venues.map(v=>`<option value="${v.id}"${e.venueId===v.id?' selected':''}>${v.name}</option>`)).join('');
-  const vendorChecks=_vendors.length?_vendors.map(v=>`<label style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:11px;cursor:pointer"><input type="checkbox" class="ev-vendor-cb" value="${v.name.replace(/"/g,'&quot;')}" ${(e.vendorNames||[]).includes(v.name)?'checked':''}> ${v.name}</label>`).join(''):'<div style="font-size:11px;color:var(--t4)">No vendors in the directory yet — add some in the Vendors tab.</div>';
-  return fld('Venue',`<select id="ed-evvenue">${venueOpts}</select>`)+
-    `<div class="fg"><div class="fl">Vendors Used</div><div style="max-height:120px;overflow-y:auto">${vendorChecks}</div></div>`;
+function evDaysOut(e){
+  const d=new Date(e.date);
+  if(isNaN(d))return'';
+  const today=new Date();today.setHours(0,0,0,0);
+  const diff=Math.round((d-today)/86400000);
+  if(diff>1)return diff+' days out';
+  if(diff===1)return'Tomorrow';
+  if(diff===0)return'Today';
+  return'';
+}
+function evSetFilter(f){_evFilter=f;renderEvents();}
+function openEventDetail(id,bucket){
+  const pg=document.getElementById('page-events');
+  if(pg&&!pg.classList.contains('active'))showPage('events');
+  _evOpenId=id;_evOpenBucket=bucket;_evTab='overview';_evAttSearch='';
+  renderEvDetail();
+}
+function backToEventsList(){
+  _evOpenId=null;
+  const dv=document.getElementById('ev-detail-view'),lv=document.getElementById('ev-list-view');
+  if(dv)dv.style.display='none';if(lv)lv.style.display='block';
+  renderEvents();
+}
+function renderEvDetail(){
+  const e=_evCur();if(!e){backToEventsList();return;}
+  if(!e.files)e.files=[];if(!e.attendees)e.attendees={};if(!e.attSheet)e.attSheet='';
+  if(!e.notes)e.notes='';if(!e.checklist)e.checklist=[];if(!e.vendorNames)e.vendorNames=[];
+  if(e.venueId===undefined)e.venueId=null;
+  currentTarget=e;
+  document.getElementById('ev-list-view').style.display='none';
+  const dv=document.getElementById('ev-detail-view');dv.style.display='block';
+  const r=evReadiness(e);
+  const days=_evOpenBucket==='upcoming'?evDaysOut(e):'';
+  const status=_evOpenBucket==='past'?['','Past']:(r.pct===100&&r.venue&&r.venue.status==='Confirmed'?['bg','Ready']:['bo','Planning']);
+  const tabs=[['overview','Overview'],['ros','Run of Show'],['checklist','Checklist & Staffing'],['budget','Budget & Vendors'],['attendance','Attendance']];
+  dv.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+      <button class="btn btn-g btn-sm" onclick="backToEventsList()">&larr; Back</button>
+      <input type="text" value="${(e.name||'').replace(/"/g,'&quot;')}" placeholder="Event name" style="font-size:15px;font-weight:700;border:none;background:none;color:var(--t1);outline:none;flex:1;min-width:160px" onchange="_evSetField('name',this.value)">
+      <span class="badge ${status[0]}">${status[1]}</span>
+      ${days?`<span style="font-size:10px;color:var(--t3)">${days}</span>`:''}
+      <button class="btn btn-g btn-sm" onclick="moveEventBucket()">${_evOpenBucket==='upcoming'?'Move to Past':'Move to Upcoming'}</button>
+      <button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="deleteOpenEvent()">Delete</button>
+    </div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input type="text" value="${(e.date||'').replace(/"/g,'&quot;')}" placeholder="Date" style="font-size:11px;border:none;border-bottom:1px solid var(--bd);background:none;color:var(--t2);outline:none;width:120px" onchange="_evSetField('date',this.value)">
+      &middot;
+      <input type="text" value="${(e.loc||'').replace(/"/g,'&quot;')}" placeholder="Location" style="font-size:11px;border:none;border-bottom:1px solid var(--bd);background:none;color:var(--t2);outline:none;width:220px" onchange="_evSetField('loc',this.value)">
+      &middot; <span>Checked in: ${Object.values(e.attendees).filter(Boolean).length}</span>
+    </div>
+    <div class="tabs" style="margin-bottom:16px">${tabs.map(t=>`<div class="tab${_evTab===t[0]?' active':''}" onclick="showEvTab('${t[0]}')">${t[1]}</div>`).join('')}</div>
+    <div id="ev-tab-body"></div>`;
+  renderEvTabBody();
+}
+function showEvTab(t){_evTab=t;renderEvDetail();}
+function renderEvTabBody(){
+  const e=_evCur();const body=document.getElementById('ev-tab-body');if(!e||!body)return;
+  if(_evTab==='overview')body.innerHTML=_evOverviewHtml(e);
+  else if(_evTab==='ros'){
+    currentRosEvent=e.name;
+    if(!rosData[e.name])rosData[e.name]={sheetUrl:'',rows:[]};
+    body.innerHTML=_evRosHtml(e);
+    renderRos();
+  }
+  else if(_evTab==='checklist')body.innerHTML=_evChecklistTabHtml(e);
+  else if(_evTab==='budget')body.innerHTML=_evBudgetTabHtml(e);
+  else body.innerHTML=_evAttendanceHtml(e);
+}
+function _evOverviewHtml(e){
+  const r=evReadiness(e);
+  const match=_roiEntries.find(x=>x.name.trim().toLowerCase()===e.name.trim().toLowerCase());
+  const net=match?match.rev-match.exp:null;
+  const venueOpts=['<option value="">— None —</option>'].concat(venues.map(v=>`<option value="${v.id}"${e.venueId===v.id?' selected':''}>${v.name} (${v.status})</option>`)).join('');
+  const needs=[];
+  (e.checklist||[]).filter(c=>!c.done).slice(0,3).forEach(c=>needs.push({t:c.item,s:'Checklist · '+(c.phase==='Pre'?'pre-event':'post-event')}));
+  const unfilled=volunteerSlots.filter(s=>s.eventId===e.id&&!(s.assignee&&String(s.assignee).trim()));
+  if(unfilled.length)needs.push({t:unfilled.length+' unfilled staffing role'+(unfilled.length!==1?'s':''),s:unfilled.slice(0,3).map(s=>s.role).join(', ')});
+  if(!r.venue)needs.push({t:'No venue linked yet',s:'Pick one below or add it in Operations › Venue Tracker'});
+  return `
+    <div class="sg" style="margin-bottom:14px">
+      <div class="sc"><div class="sl">Venue</div><div class="sv" style="font-size:14px;color:${r.venue&&r.venue.status==='Confirmed'?'var(--grn)':'var(--gold2)'}">${r.venue?r.venue.status:'None'}</div><div class="sm">${r.venue?r.venue.name:'Not picked yet'}</div></div>
+      <div class="sc"><div class="sl">Checklist</div><div class="sv" style="font-size:14px">${r.checkDone} / ${r.checkTot}</div><div class="sm">Items done</div></div>
+      <div class="sc"><div class="sl">Staffing</div><div class="sv" style="font-size:14px;color:${r.staffTot&&r.staffFilled===r.staffTot?'var(--grn)':'var(--gold2)'}">${r.staffFilled} / ${r.staffTot}</div><div class="sm">Roles filled</div></div>
+      <div class="sc"><div class="sl">Budget</div><div class="sv" style="font-size:14px;color:${net==null?'var(--t3)':net>=0?'var(--grn)':'var(--cr)'}">${net==null?'—':(net>=0?'+$':'-$')+Math.abs(net).toFixed(0)}</div><div class="sm">${match?'Net from Finance':'No Finance entry'}</div></div>
+    </div>
+    <div class="dsl">Needs Attention Next</div>
+    ${needs.length?needs.map(n=>`<div style="display:flex;gap:8px;align-items:baseline;padding:8px 10px;border:1px solid var(--bd);border-radius:6px;margin-bottom:6px;font-size:11px"><span style="color:var(--gold2)">●</span><span style="font-weight:600;color:var(--t1)">${n.t}</span><span style="color:var(--t4)">· ${n.s}</span></div>`).join(''):'<div style="font-size:11px;color:var(--t4);padding:4px 0 8px">Nothing urgent — checklist clear and roles filled.</div>'}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;align-items:start">
+      <div>
+        ${fld('Venue',`<select onchange="_evSetVenue(this.value)">${venueOpts}</select>`)}
+        ${fld('Description',`<textarea style="min-height:110px;line-height:1.6" onchange="_evSetField('desc',this.value)">${String(e.desc||'').replace(/</g,'&lt;')}</textarea>`)}
+      </div>
+      <div>
+        ${fld('Planning Notes / Ideas',`<textarea style="min-height:174px;line-height:1.6" placeholder="Goals, name ideas, open questions, brainstorm…" onchange="_evSetField('notes',this.value)">${String(e.notes||'').replace(/</g,'&lt;')}</textarea>`)}
+      </div>
+    </div>
+    <div class="dsl" style="margin-top:14px">Linked Drive Files</div>
+    <div id="d-attached-files">${renderAttachedFiles(e.files)}</div>
+    <button class="btn btn-g btn-sm" style="margin-top:8px" onclick="toggleDrive()">Browse Drive</button>`;
+}
+function _evRosHtml(e){
+  return `<div style="font-size:11px;color:var(--t3);margin-bottom:10px">Timed schedule for <strong>${e.name}</strong>. Rows save automatically as you type.</div>
+    <div class="card" style="margin-bottom:14px;padding:14px">
+      <table><thead><tr><th style="width:70px">Day</th><th style="width:80px">Start</th><th style="width:80px">End</th><th>Item / Activity</th><th style="width:130px">Owner</th><th></th></tr></thead>
+      <tbody id="ros-rows-table"></tbody></table>
+      <button class="btn btn-g btn-sm" style="margin-top:10px" onclick="addRosRow()">+ Add Row</button>
+    </div>
+    <div class="card" style="padding:14px">
+      <div class="dsl">Or Embed a Google Sheet Instead</div>
+      <div style="display:flex;gap:7px;align-items:center;margin-bottom:10px">
+        <input id="ros-url-input" type="text" placeholder="Paste Google Sheets URL…" style="flex:1;font-size:11px;padding:6px 9px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
+        <button class="btn btn-p btn-sm" onclick="setRosSheet()">Embed</button>
+        <button class="btn btn-g btn-sm" style="color:#E57373" onclick="clearRosSheet()">Clear</button>
+      </div>
+      <div id="ros-sheet-embed"></div>
+    </div>`;
+}
+function _evChecklistTabHtml(e){
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
+    <div class="card" style="padding:14px"><div class="dsl">Checklist</div>${evChecklistHtml(e,_evOpenBucket)}</div>
+    <div class="card" style="padding:14px"><div class="dsl">Staffing / Cue Sheet</div>${evStaffingHtml(e,_evOpenBucket)}</div>
+  </div>`;
+}
+function _evBudgetTabHtml(e){
+  const vendorChecks=_vendors.length?_vendors.map(v=>`<label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11px;cursor:pointer"><input type="checkbox" class="ev-vendor-cb" value="${v.name.replace(/"/g,'&quot;')}" ${(e.vendorNames||[]).includes(v.name)?'checked':''} style="width:auto" onchange="_evSaveVendors()"> ${v.name} <span style="color:var(--t4);font-size:10px">${v.category||''}</span></label>`).join(''):'<div style="font-size:11px;color:var(--t4)">No vendors in the directory yet — add some in Operations › Vendors.</div>';
+  return `<div class="card" style="padding:14px;margin-bottom:14px"><div class="dsl">Budget</div>${evBudgetHtml(e)}</div>
+    <div class="card" style="padding:14px"><div class="dsl">Vendors Used</div><div style="max-height:180px;overflow-y:auto">${vendorChecks}</div></div>`;
+}
+function _evSaveVendors(){
+  const e=_evCur();if(!e)return;
+  e.vendorNames=Array.from(document.querySelectorAll('.ev-vendor-cb:checked')).map(cb=>cb.value);
+  saveData();renderVendors();
+}
+function _evAttListHtml(e){
+  const q=_evAttSearch.toLowerCase();
+  const rows=members.map((m,mi)=>({m,mi})).filter(x=>!q||(x.m.first+' '+x.m.last).toLowerCase().includes(q));
+  if(!members.length)return'<div style="font-size:11px;color:var(--t4);padding:8px 0">No members added yet.</div>';
+  if(!rows.length)return'<div style="font-size:11px;color:var(--t4);padding:8px 0">No members match.</div>';
+  return rows.map(x=>`<label style="display:flex;align-items:center;gap:7px;padding:3px 0;font-size:12px;cursor:pointer">
+    <input type="checkbox" data-mi="${x.mi}" ${e.attendees[x.mi]?'checked':''} style="width:auto" onchange="toggleEvAtt(${e.id},'${_evOpenBucket}',this)">
+    <span>${x.m.first} ${x.m.last}</span><span style="color:var(--t4);font-size:10px">${x.m.role||''}</span></label>`).join('');
+}
+function _evRefreshAttList(){
+  const e=_evCur();if(!e)return;
+  const el=document.getElementById('ev-att-list');if(el)el.innerHTML=_evAttListHtml(e);
+}
+function _evAttendanceHtml(e){
+  const checkedCount=Object.values(e.attendees).filter(Boolean).length;
+  return `<div class="card" style="padding:14px">
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px">
+      <input id="ev-att-sheet" type="text" value="${(e.attSheet||'').replace(/"/g,'&quot;')}" placeholder="Paste Google Sheets sign-in URL…" style="flex:1;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
+      <button class="btn btn-g btn-sm" onclick="saveEvSheet(${e.id},'${_evOpenBucket}')">Save</button>
+      ${e.attSheet?`<a href="${e.attSheet}" target="_blank" class="btn btn-p btn-sm" style="text-decoration:none">Open ↗</a>`:''}
+    </div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px" id="ev-att-count">Checked in: ${checkedCount} / ${members.length}</div>
+    <input type="text" value="${_evAttSearch.replace(/"/g,'&quot;')}" placeholder="Search members…" style="width:100%;font-size:11px;padding:6px 9px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none;margin-bottom:8px;box-sizing:border-box" oninput="_evAttSearch=this.value;_evRefreshAttList()">
+    <div style="max-height:320px;overflow-y:auto" id="ev-att-list">${_evAttListHtml(e)}</div>
+  </div>`;
+}
+function _evSetField(key,val){
+  const e=_evCur();if(!e)return;
+  if(key==='name'){
+    const oldName=e.name;e.name=val;
+    if(oldName!==val&&rosData[oldName]){rosData[val]=rosData[oldName];delete rosData[oldName];if(currentRosEvent===oldName)currentRosEvent=val;}
+    volunteerSlots.filter(s=>s.eventId===e.id).forEach(s=>s.event=val);
+  }else{e[key]=val;}
+  saveData();renderEvents();renderVenues();renderVendors();
+}
+function _evSetVenue(val){
+  const e=_evCur();if(!e)return;
+  e.venueId=val?parseInt(val):null;
+  saveData();renderEvents();renderVenues();renderEvTabBody();
+}
+function moveEventBucket(){
+  const e=_evCur();if(!e)return;
+  const from=_evOpenBucket,to=from==='upcoming'?'past':'upcoming';
+  eventsData[from]=eventsData[from].filter(x=>x.id!==e.id);
+  eventsData[to].push(e);
+  _evOpenBucket=to;_evFilter=to;
+  saveData();renderEvDetail();
+}
+function deleteOpenEvent(){
+  const e=_evCur();if(!e)return;
+  if(!confirm('Delete "'+e.name+'"?'))return;
+  eventsData[_evOpenBucket]=eventsData[_evOpenBucket].filter(x=>x.id!==e.id);
+  saveData();backToEventsList();
 }
 function evStaffingHtml(e,bucket){
   const rows=volunteerSlots.filter(s=>s.eventId===e.id);
@@ -3092,11 +3227,11 @@ function addEvStaffRow(id,bucket){
   const assignee=document.getElementById('ev-staff-assignee').value.trim();
   if(!role)return;
   volunteerSlots.push({id:nVS++,event:e.name,eventId:id,role,assignee,notes:''});
-  openEventDetail(id,bucket);
+  saveData();renderEvTabBody();
 }
 function delEvStaffRow(id,bucket,slotId){
   volunteerSlots=volunteerSlots.filter(s=>s.id!==slotId);
-  openEventDetail(id,bucket);
+  saveData();renderEvTabBody();
 }
 function evChecklistHtml(e,bucket){
   const pre=e.checklist.filter(c=>c.phase==='Pre');
@@ -3123,18 +3258,18 @@ function addEvChecklistItem(id,bucket){
   const phase=document.getElementById('ev-check-phase').value;
   const nid=(e.checklist.length?Math.max(...e.checklist.map(c=>c.id)):0)+1;
   e.checklist.push({id:nid,item,phase,owner:'',done:false});
-  openEventDetail(id,bucket);
+  saveData();renderEvTabBody();renderEvents();
 }
 function toggleEvChecklistItem(id,bucket,itemId){
   const e=eventsData[bucket].find(x=>x.id===id);if(!e||!e.checklist)return;
   const c=e.checklist.find(x=>x.id===itemId);if(!c)return;
   c.done=!c.done;
-  openEventDetail(id,bucket);
+  saveData();renderEvTabBody();renderEvents();
 }
 function delEvChecklistItem(id,bucket,itemId){
   const e=eventsData[bucket].find(x=>x.id===id);if(!e||!e.checklist)return;
   e.checklist=e.checklist.filter(x=>x.id!==itemId);
-  openEventDetail(id,bucket);
+  saveData();renderEvTabBody();renderEvents();
 }
 function evBudgetHtml(e){
   const match=_roiEntries.find(r=>r.name.trim().toLowerCase()===e.name.trim().toLowerCase());
@@ -3156,31 +3291,12 @@ function toggleEvAtt(id,bucket,cb){
   e.att=Object.values(e.attendees).filter(Boolean).length;
   const countEl=document.getElementById('ev-att-count');
   if(countEl)countEl.textContent='Checked in: '+e.att+' / '+members.length;
-  document.getElementById('ed-evatt').value=e.att;
   saveData();renderEvents();
 }
 function saveEvSheet(id,bucket){
   const e=eventsData[bucket].find(x=>x.id===id);if(!e)return;
   e.attSheet=document.getElementById('ev-att-sheet').value.trim();
-  saveData();openEventDetail(id,bucket);
-}
-function saveEvent(id,bucket,btn){
-  const e=eventsData[bucket].find(x=>x.id===id);
-  const oldName=e.name;
-  e.name=g('ed-evname');e.date=g('ed-evdate');e.loc=g('ed-evloc');
-  e.desc=g('ed-evdesc');e.notes=g('ed-evnotes');
-  const venSel=document.getElementById('ed-evvenue');
-  e.venueId=venSel&&venSel.value?parseInt(venSel.value):null;
-  e.vendorNames=Array.from(document.querySelectorAll('.ev-vendor-cb:checked')).map(cb=>cb.value);
-  if(oldName!==e.name&&rosData[oldName]){
-    rosData[e.name]=rosData[oldName];
-    delete rosData[oldName];
-    if(currentRosEvent===oldName)currentRosEvent=e.name;
-  }
-  volunteerSlots.filter(s=>s.eventId===id).forEach(s=>s.event=e.name);
-  renderEvents();renderVenues();renderVendors();renderRos();saved(btn);
-  document.getElementById('d-title').textContent=e.name;
-  document.getElementById('d-sub').textContent=e.date+' · '+e.loc;
+  saveData();renderEvTabBody();
 }
 
 // TEMPLATE EDIT
@@ -3313,10 +3429,40 @@ function renderAgendas(){
   }).join('');
 }
 function renderEvents(){
-  const u=document.getElementById('upcoming-list');
-  if(u)u.innerHTML=eventsData.upcoming.map(e=>`<div class="evc" onclick="openEventDetail(${e.id},'upcoming')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="evn">${e.name}</div><span class="badge bo">${e.date}</span></div><div class="evs"><div class="evst">Location: <span>${e.loc}</span></div><div class="evst">Est. Att: <span>${e.att}</span></div><div class="evst">Drive Files: <span>${e.files&&e.files.length?e.files.length+' linked':'None'}</span></div></div></div>`).join('');
-  const p=document.getElementById('past-list');
-  if(p)p.innerHTML=eventsData.past.map(e=>`<div class="evc" onclick="openEventDetail(${e.id},'past')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div class="evn">${e.name}</div><span class="badge bg">${e.date}</span></div><div class="evs"><div class="evst">Members: <span>${e.att}</span></div></div></div>`).join('');
+  const chips=document.getElementById('ev-filter-chips');
+  if(chips){
+    chips.innerHTML=[['upcoming','Upcoming'],['past','Past']].map(f=>{
+      const active=_evFilter===f[0];
+      return`<button class="btn btn-sm ${active?'btn-p':'btn-g'}" onclick="evSetFilter('${f[0]}')">${f[1]} (${(eventsData[f[0]]||[]).length})</button>`;
+    }).join('');
+  }
+  const el=document.getElementById('events-cards-list');
+  if(el){
+    const bucket=_evFilter;
+    const list=eventsData[bucket]||[];
+    if(!list.length){el.innerHTML=`<div style="padding:20px;text-align:center;color:var(--t4);font-size:11px">No ${bucket} events yet. Click "+ Add Event" to create one.</div>`;}
+    else el.innerHTML=list.map(e=>{
+      const r=evReadiness(e);
+      const days=bucket==='upcoming'?evDaysOut(e):'';
+      const status=bucket==='past'?['','Past']:(r.pct===100&&r.venue&&r.venue.status==='Confirmed'?['bg','Ready']:['bo','Planning']);
+      const venTxt=r.venue?r.venue.status.toLowerCase():'none';
+      const venColor=r.venue&&r.venue.status==='Confirmed'?'var(--grn)':'var(--gold2)';
+      const bar=r.pct===null
+        ?`<div style="font-size:10px;color:var(--t4)">No checklist or staffing yet — open to start planning.</div>`
+        :`<div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden"><div style="width:${r.pct}%;height:100%;background:var(--grn)"></div></div>
+            <span style="font-size:10px;color:var(--t3);white-space:nowrap">${r.pct}% ready · checklist ${r.checkDone}/${r.checkTot} · staffing ${r.staffFilled}/${r.staffTot} · venue <span style="color:${venColor}">${venTxt}</span></span>
+          </div>`;
+      return`<div style="border:1px solid var(--bd);border-radius:8px;margin-bottom:10px;padding:11px 14px;cursor:pointer" onclick="openEventDetail(${e.id},'${bucket}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:8px">
+          <div style="min-width:0"><span style="font-size:12.5px;font-weight:700;color:var(--t1)">${e.name}</span>
+            <span style="font-size:10px;color:var(--t3);margin-left:8px">${e.date}${days?' · '+days:''} · ${e.loc}</span></div>
+          <span class="badge ${status[0]}" style="flex-shrink:0">${status[1]}</span>
+        </div>
+        ${bar}
+      </div>`;
+    }).join('');
+  }
   renderOpsUpcoming();
 }
 function renderOpsUpcoming(){
@@ -3393,8 +3539,10 @@ function addEvent(){
   const name=document.getElementById('ev-name').value.trim();if(!name)return;
   const date=document.getElementById('ev-date').value;
   const dStr=date?new Date(date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'TBD';
-  eventsData.upcoming.push({id:nEv++,name,date:dStr,loc:document.getElementById('ev-loc').value||'TBD',att:parseInt(document.getElementById('ev-att').value)||0,desc:document.getElementById('ev-desc').value,files:[]});
-  closeModals();renderEvents();renderRos();
+  const nid=nEv++;
+  eventsData.upcoming.push({id:nid,name,date:dStr,loc:document.getElementById('ev-loc').value||'TBD',att:parseInt(document.getElementById('ev-att').value)||0,desc:document.getElementById('ev-desc').value,files:[],checklist:[],vendorNames:[],venueId:null,notes:''});
+  closeModals();renderEvents();
+  openEventDetail(nid,'upcoming');
 }
 function addBootcamp(){
   const name=document.getElementById('bc-name').value.trim();if(!name)return;
@@ -5594,6 +5742,12 @@ function showPage(id){
   if(m){document.getElementById('page-title').textContent=m[0];document.getElementById('page-sub').textContent=m[1];}
   if(PORTALS_CFG[id])renderPortals();
   if(id==='agendas')renderAgendasHub();
+  if(id==='events'){
+    _evOpenId=null;
+    const dv=document.getElementById('ev-detail-view'),lv=document.getElementById('ev-list-view');
+    if(dv)dv.style.display='none';if(lv)lv.style.display='block';
+    renderEvents();
+  }
 }
 function showTab(page,tab){
   const appEl=document.getElementById('app-ebod');
@@ -5689,12 +5843,6 @@ function deleteRosRow(id){
   if(!currentRosEvent||!rosData[currentRosEvent]||!rosData[currentRosEvent].rows)return;
   rosData[currentRosEvent].rows=rosData[currentRosEvent].rows.filter(x=>x.id!==id);
   saveData();renderRosSchedule();
-}
-function switchRos(eventName){
-  if(!eventName)return;
-  currentRosEvent=eventName;
-  if(!rosData[eventName])rosData[eventName]={sheetUrl:'',rows:[]};
-  renderRos();
 }
 function setRosSheet(){
   if(!currentRosEvent){alert('Select an event first.');return;}
