@@ -5325,6 +5325,63 @@ let _polarisGuides=JSON.parse(localStorage.getItem('pbl_polarisguides')||JSON.st
   {title:'Business Plan Structure',category:'Strategy',icon:'📋',pinned:true,open:false,content:`1. EXECUTIVE SUMMARY  (write last, present first)\n   Business concept, mission, product/service overview\n   Target market and competitive advantage\n   Financial highlights and funding request\n\n2. COMPANY DESCRIPTION\n   Business name, location, legal structure\n   History/origin, vision, and mission statement\n   Short-term and long-term goals\n\n3. MARKET ANALYSIS\n   Industry overview and trends (cite real data)\n   Target customer profile (demographics, behavior)\n   Competitive analysis — direct and indirect competitors\n   Market size and estimated market share\n\n4. PRODUCTS & SERVICES\n   Description of offerings\n   Unique value proposition\n   Pricing strategy and rationale\n\n5. MARKETING & SALES STRATEGY\n   Channels — social media, partnerships, events\n   Customer acquisition and retention plan\n\n6. OPERATIONS PLAN\n   Location, facilities, key equipment\n   Staffing and management structure\n   Key processes and workflows\n\n7. FINANCIAL PROJECTIONS\n   Startup costs breakdown\n   Revenue forecast — Year 1–3\n   Break-even analysis\n   Cash flow statement\n\nTIPS\n• Judges read the executive summary first and last — make it strong\n• Use real numbers and cite your market research sources\n• Avoid vague buzzwords — be specific and direct\n• Proofread financial tables for consistency`},
 ]));
 
+// ── ROLE DATA SYNC REGISTRY ──
+// Every dataset saved via saveRoleData (localStorage 'pbl_*' keys). Registered
+// here so it rides along in the saveData()/Supabase blob instead of living
+// only in this browser.
+const ROLE_SYNC={
+  statementdata:{get:()=>_statementData,set:v=>_statementData=v},
+  confpayledger:{get:()=>_confPayLedger,set:v=>_confPayLedger=v},
+  roi:{get:()=>_roiEntries,set:v=>_roiEntries=v},
+  iccforms:{get:()=>_iccForms,set:v=>_iccForms=v},
+  finreports:{get:()=>_finReports,set:v=>_finReports=v},
+  conflogistics:{get:()=>_confLogistics,set:v=>_confLogistics=v},
+  kpis:{get:()=>_kpiEntries,set:v=>_kpiEntries=v},
+  iccexcursions:{get:()=>_iccExcursions,set:v=>_iccExcursions=v},
+  prg_roster:{get:()=>_prgRoster,set:v=>_prgRoster=v},
+  prg_initiatives:{get:()=>_prgInitiatives,set:v=>_prgInitiatives=v},
+  onboardees:{get:()=>_onboardees,set:v=>_onboardees=v},
+  devgoals:{get:()=>_devGoals,set:v=>_devGoals=v},
+  campaigns:{get:()=>_campaigns,set:v=>_campaigns=v},
+  analytics:{get:()=>_analyticsLog,set:v=>_analyticsLog=v},
+  outreach:{get:()=>_outreachLog,set:v=>_outreachLog=v},
+  partners:{get:()=>_partners,set:v=>_partners=v},
+  compliance:{get:()=>_complianceLog,set:v=>_complianceLog=v},
+  roombookings:{get:()=>_roomBookings,set:v=>_roomBookings=v},
+  iccminutes:{get:()=>_iccMinutes,set:v=>_iccMinutes=v},
+  bluepanda:{get:()=>_bluePandaRegs,set:v=>_bluePandaRegs=v},
+  confevents:{get:()=>_confEvents,set:v=>_confEvents=v},
+  agendas:{get:()=>_presAgendas,set:v=>_presAgendas=v},
+  delegation:{get:()=>_delegations,set:v=>_delegations=v},
+  officercheckins:{get:()=>_officerCheckins,set:v=>_officerCheckins=v},
+  decisionlog:{get:()=>_decisionLog,set:v=>_decisionLog=v},
+  memberpoints:{get:()=>_memberPoints,set:v=>_memberPoints=v},
+  vendors:{get:()=>_vendors,set:v=>_vendors=v},
+  commslog:{get:()=>_commsLog,set:v=>_commsLog=v},
+  graphicrequests:{get:()=>_graphicRequests,set:v=>_graphicRequests=v},
+  compresults:{get:()=>_compResults,set:v=>_compResults=v},
+  polarisassignments:{get:()=>_polarisAssignments,set:v=>_polarisAssignments=v},
+  polarislessons:{get:()=>_polarisLessons,set:v=>_polarisLessons=v},
+  polarisguides:{get:()=>_polarisGuides,set:v=>_polarisGuides=v},
+};
+function _collectRoleData(){
+  const out={};
+  Object.entries(ROLE_SYNC).forEach(([k,c])=>{try{out[k]=c.get();}catch(e){}});
+  out._budgetTarget=budgetTarget;
+  return out;
+}
+function _applyRoleData(rd){
+  if(!rd)return;
+  Object.entries(ROLE_SYNC).forEach(([k,c])=>{
+    if(rd[k]!==undefined){
+      try{c.set(rd[k]);localStorage.setItem('pbl_'+k,JSON.stringify(rd[k]));}catch(e){}
+    }
+  });
+  if(rd._budgetTarget!==undefined){
+    budgetTarget=parseFloat(rd._budgetTarget)||budgetTarget;
+    try{localStorage.setItem('dapbl_budget_target',budgetTarget);}catch(e){}
+  }
+}
 
 // EXEC PORTALS
 const PORTALS_CFG={
@@ -5447,6 +5504,12 @@ function renderPortals(){
 }
 
 // ---- FEATURE 1: localStorage persistence ----
+// Member-content data (previously referenced without declaration, which made
+// every saveData() call throw and silently killed localStorage + Supabase sync)
+let resources={guides:[],templates:[]};
+let eventSlides=[];
+let lectureSlides=[];
+
 const SAVE_KEY='pblhub_v1';
 let _saveTimer=null;
 async function saveData(){
@@ -5458,15 +5521,22 @@ async function saveData(){
     compEvents,resources,eventSlides,lectureSlides,
     pblTransactions,merchSales,importedCalEvents,
     nM,nE,nB,nT,nA,nEv,nEmail,nCon,nCli,nDel,nCR,nCE,nCH,nTr,nMin,nPr,nGoal,nTD,nAnn,nMP,nSp,nPl,
-    nEC,nReim,nVen,nVS,nCP,nCurr,nBKC,nBKF,nPost,nMCI,nPblTr,nMerch,nMDb
+    nEC,nReim,nVen,nVS,nCP,nCurr,nBKC,nBKF,nPost,nMCI,nPblTr,nMerch,nMDb,
+    roleData:_collectRoleData()
   };
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}
-  // Save to Supabase (async, non-blocking)
+  // Save to Supabase (async, non-blocking). One shared row for the whole club;
+  // falls back to the legacy per-user row if hub_shared doesn't exist yet.
   if(window._sb){
     const {data:{user}} = await window._sb.auth.getUser();
     if(user){
-      window._sb.from('hub_data').upsert({id:user.id, data:d, updated_at:new Date().toISOString()})
-        .then(({error})=>{if(error)console.warn('Supabase write failed:',error.message);});
+      window._sb.from('hub_shared').upsert({id:1, data:d, updated_at:new Date().toISOString()})
+        .then(({error})=>{
+          if(error){
+            window._sb.from('hub_data').upsert({id:user.id, data:d, updated_at:new Date().toISOString()})
+              .then(({error:e2})=>{if(e2)console.warn('Supabase write failed:',e2.message);});
+          }
+        });
     }
   }
   const ind=document.getElementById('save-indicator');
@@ -5553,6 +5623,7 @@ function loadData(){
     if(d.nBKF!==undefined)nBKF=d.nBKF;
     if(d.nPost!==undefined)nPost=d.nPost;
     if(d.nMCI!==undefined)nMCI=d.nMCI;
+    if(d.roleData)_applyRoleData(d.roleData);
   }catch(e){}
 }
 function resetAllData(){
@@ -6091,6 +6162,7 @@ function _applyFirestoreData(d){
   if(d.pblTransactions)pblTransactions=d.pblTransactions;
   if(d.merchSales)merchSales=d.merchSales;
   if(d.importedCalEvents)importedCalEvents=d.importedCalEvents;
+  if(d.roleData)_applyRoleData(d.roleData);
   // Also write to localStorage so syncFromEBOD() still works same-device
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}
 }
@@ -6158,9 +6230,22 @@ async function logoutEBOD(){
 async function _loadSupabaseData(){
   const {data:{user}}=await window._sb.auth.getUser();
   if(!user)return;
-  const {data,error}=await window._sb.from('hub_data').select('data').eq('id',user.id).single();
-  if(error||!data)return;
-  const d=data.data;
+  let d=null,sharedAvailable=false;
+  try{
+    const {data:shared,error:se}=await window._sb.from('hub_shared').select('data').eq('id',1).maybeSingle();
+    if(!se){sharedAvailable=true;if(shared&&shared.data)d=shared.data;}
+  }catch(e){}
+  if(!d){
+    const {data,error}=await window._sb.from('hub_data').select('data').eq('id',user.id).single();
+    if(error||!data)return;
+    d=data.data;
+    // Migrate: seed the shared row with this user's data so everyone syncs from now on
+    if(sharedAvailable&&d){
+      window._sb.from('hub_shared').upsert({id:1,data:d,updated_at:new Date().toISOString()})
+        .then(({error:me})=>{if(me)console.warn('Shared row seed failed:',me.message);});
+    }
+  }
+  if(!d)return;
   if(d.members)members=d.members;
   if(d.execTeam)execTeam=d.execTeam;
   if(d.bootcamps)bootcamps=d.bootcamps;
@@ -6238,6 +6323,7 @@ async function _loadSupabaseData(){
   if(d.mdbPlacements)mdbPlacements=d.mdbPlacements;if(d.nMDbPl!==undefined)nMDbPl=d.nMDbPl;
   if(d.hubDocs)hubDocs=d.hubDocs;if(d.nDoc!==undefined)nDoc=d.nDoc;
   if(d.docFolders)docFolders=d.docFolders;
+  if(d.roleData)_applyRoleData(d.roleData);
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}
 }
 // Auto-restore session on page refresh
@@ -6791,7 +6877,10 @@ async function switchToLanding(){
   resetLanding();
 }
 
-function saveRoleData(key,val){localStorage.setItem('pbl_'+key,JSON.stringify(val));}
+function saveRoleData(key,val){
+  localStorage.setItem('pbl_'+key,JSON.stringify(val));
+  clearTimeout(_saveTimer);_saveTimer=setTimeout(saveData,800);
+}
 
 // ── HELPERS ──
 function roleRow(cells,delFn){
