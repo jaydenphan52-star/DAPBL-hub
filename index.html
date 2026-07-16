@@ -5512,6 +5512,7 @@ let lectureSlides=[];
 
 const SAVE_KEY='pblhub_v1';
 let _saveTimer=null;
+let _lastSaveAt=0;
 async function saveData(){
   const d={
     members,execTeam,bootcamps,tasks,agendas,eventsData,emails,consultingProjects,clients,deliverables,
@@ -5530,6 +5531,7 @@ async function saveData(){
   if(window._sb){
     const {data:{user}} = await window._sb.auth.getUser();
     if(user){
+      _lastSaveAt=Date.now();
       window._sb.from('hub_shared').upsert({id:1, data:d, updated_at:new Date().toISOString()})
         .then(({error})=>{
           if(error){
@@ -6173,6 +6175,41 @@ function _renderAll(){
   renderMentorship();renderDashboard();renderEcSelect();renderReimbursements();
   renderMemberContent();renderMerch();
 }
+
+// ── LIVE SYNC (Supabase Realtime on hub_shared) ──
+let _rtChannel=null;let _pendingRemote=null;let _rtApplyTimer=null;
+function _startRealtimeSync(){
+  if(_rtChannel||!window._sb)return;
+  try{
+    _rtChannel=window._sb.channel('hub-shared-sync')
+      .on('postgres_changes',{event:'*',schema:'public',table:'hub_shared',filter:'id=eq.1'},payload=>{
+        if(Date.now()-_lastSaveAt<4000)return;
+        const d=payload.new&&payload.new.data;if(!d)return;
+        _pendingRemote=d;
+        _tryApplyRemote();
+      })
+      .subscribe();
+  }catch(e){console.warn('Realtime sync unavailable:',e);_rtChannel=null;}
+}
+function _tryApplyRemote(){
+  if(!_pendingRemote)return;
+  const ae=document.activeElement;
+  const typing=ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.isContentEditable);
+  if(typing){
+    clearTimeout(_rtApplyTimer);
+    _rtApplyTimer=setTimeout(_tryApplyRemote,2000);
+    return;
+  }
+  const d=_pendingRemote;_pendingRemote=null;
+  _applyFirestoreData(d);
+  _renderAll();
+  try{renderPortals();renderCalendar();renderVenues();renderVendors();renderDocs();}catch(e){}
+  try{
+    if(_evOpenId!=null)renderEvDetail();
+    if(_paOpenIdx!=null)renderAgendaDetailView();
+    else{const pg=document.getElementById('page-agendas');if(pg&&pg.classList.contains('active'))renderAgendasHub();}
+  }catch(e){}
+}
 let _imReimbs=[];
 let _officeHourReqs=[];
 let _mentorCheckinsList=[];
@@ -6202,6 +6239,7 @@ function _enterEBOD(){
   renderMembers();renderExec();renderBootcamps();renderTasks();renderAgendas();renderEvents();renderRos();renderTemplates();renderSponsors();renderEmailList();renderConsulting();renderCompetition();renderBudget();renderMinutes();renderRecruitment();renderGoals();renderTransition();renderAnnouncements();renderMentorship();renderDashboard();renderPortals();renderEcSelect();renderReimbursements();renderVenues();renderVolSlots();renderCompPrep();renderCurriculum();renderBrandKit();renderContentCalendar();renderCaMentors();renderMemberCheckIns();renderCalendar();renderMemberContent();
   if(typeof updateMemberDisplay==='function')updateMemberDisplay();
   initExtraListeners();
+  _startRealtimeSync();
 }
 async function loginEBOD(){
   const email=document.getElementById('land-ebod-email').value.trim();
