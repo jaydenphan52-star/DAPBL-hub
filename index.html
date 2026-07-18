@@ -434,7 +434,7 @@ textarea{resize:vertical;min-height:120px;}
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h2v4H2zM4 7l6-4v10L4 9"/><path d="M10 7c1 0 2 .5 2 1.5S11 10 10 10"/></svg>Marketing
       </div>
       <div class="ni" onclick="showPage('portal-clubaffairs')">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3 2.5-5 6-5s6 2 6 5"/></svg>Club Affairs
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3 2.5-5 6-5s6 2 6 5"/></svg>Communications
       </div>
     </div>
     <div class="nav-group">
@@ -1667,7 +1667,7 @@ textarea{resize:vertical;min-height:120px;}
 
       </div>
 
-      <!-- CLUB AFFAIRS PORTAL -->
+      <!-- COMMUNICATIONS PORTAL (internal ids still use "clubaffairs") -->
       <div class="page" id="page-portal-clubaffairs">
         <div class="tabs">
           <div class="tab active" onclick="showTab('portal-clubaffairs','overview')">Overview</div>
@@ -2112,7 +2112,7 @@ textarea{resize:vertical;min-height:120px;}
     <div class="fg"><div class="fl">Task / Deliverable</div><input id="del-task" type="text" placeholder="e.g. Confirm venue for DAIS"></div>
     <div class="fr">
       <div class="fg"><div class="fl">Assigned To</div><input id="del-assignee" type="text" placeholder="Name"></div>
-      <div class="fg"><div class="fl">Portal</div><select id="del-portal"><option>Strategy</option><option>Finance</option><option>Operations</option><option>Marketing</option><option>Club Affairs</option><option>President</option></select></div>
+      <div class="fg"><div class="fl">Portal</div><select id="del-portal"><option>Strategy</option><option>Finance</option><option>Operations</option><option>Marketing</option><option>Communications</option><option>President</option></select></div>
     </div>
     <div class="fr">
       <div class="fg"><div class="fl">Due Date</div><input id="del-due" type="date"></div>
@@ -2640,7 +2640,7 @@ let execTeam=[
   {id:4,name:'George Huang',position:'VP of Finance'},
   {id:5,name:'Addy Hu',position:'VP of Operations'},
   {id:6,name:'Nhi Tran',position:'VP of Marketing'},
-  {id:7,name:'Christina Tran',position:'VP of Club Affairs'},
+  {id:7,name:'Christina Tran',position:'VP of Communications'},
   {id:8,name:'Anna Huynh',position:'Director of Finance'},
   {id:9,name:'Iker Jimenez',position:'Director of Strategy and Development'},
   {id:10,name:'Jordan Nguyen',position:'Director of Marketing'},
@@ -2982,7 +2982,7 @@ function saveBc(id,btn){
 function openTaskDetail(id,board){
   const t=[...tasks.ebod,...tasks.general].find(x=>x.id===id);
   const owners=['President','VP Events','VP Education','VP Operations','Secretary','Treasurer','Dir. Marketing','Dir. Design'];
-  const cats=['Events','Sponsors','Competition','Education','Marketing','Design','General','Operations','Finance','Strategy','Club Affairs','Leadership'];
+  const cats=['Events','Sponsors','Competition','Education','Marketing','Design','General','Operations','Finance','Strategy','Communications','Leadership'];
   openDetail(t.text,'Due '+t.due+' · '+t.owner,
     fld('Task Text',inp('ed-ttext',t.text))+
     row2(fld('Owner',sel('ed-towner',owners,t.owner)),fld('Due Date',inp('ed-tdue',t.due)))+
@@ -5131,7 +5131,7 @@ function addContentPost(){
   renderContentCalendar();openPostDetail(contentPosts[contentPosts.length-1].id);
 }
 
-// CLUB AFFAIRS PORTAL DATA
+// COMMUNICATIONS PORTAL DATA
 let memberCheckIns=[];let nMCI=1;
 
 function renderCaMentors(){
@@ -5818,7 +5818,7 @@ const META={
   'portal-operations':['VP of Operations',''],
   'portal-strategy':['VP of Strategy & Development',''],
   'portal-marketing':['VP of Marketing',''],
-  'portal-clubaffairs':['VP of Club Affairs',''],
+  'portal-clubaffairs':['VP of Communications',''],
   homework:['Homework','Review & grade member submissions'],
 };
 function showPage(id){
@@ -5959,7 +5959,7 @@ let _pendingDoc=null;
 
 // ── PROGRAM OF WORK ──
 let powDocs=[];let nPow=1;
-const POW_DEPTS=['Leadership','Finance','Operations','Strategy & Development','Marketing','Club Affairs'];
+const POW_DEPTS=['Leadership','Finance','Operations','Strategy & Development','Marketing','Communications'];
 const POW_TEMPLATE=['Overview','Goals & vision','Timeline','Budget','Logistics / cue sheet','Marketing plan','Post-event debrief'];
 function powPct(doc){
   if(!doc.sections||!doc.sections.length)return 0;
@@ -7427,7 +7427,7 @@ function renderOutreach(){
 }
 function deleteOutreach(i){_outreachLog.splice(i,1);saveRoleData('outreach',_outreachLog);renderOutreach();}
 
-// ── VP OF CLUB AFFAIRS: PARTNERSHIPS ──
+// ── VP OF COMMUNICATIONS: PARTNERSHIPS ──
 function addPartner(){openModal('partner-modal');}
 function submitPartner(){
   const name=document.getElementById('part-name').value.trim();if(!name)return;
@@ -7835,7 +7835,7 @@ function _deptFromPosition(pos){
   if(p.includes('financ')||p.includes('treasurer'))return'Finance';
   if(p.includes('market'))return'Marketing';
   if(p.includes('strategy')||p.includes('development'))return'Strategy';
-  if(p.includes('club affairs'))return'Club Affairs';
+  if(p.includes('club affairs')||p.includes('communication'))return'Communications';
   if(p.includes('president')||p.includes('secretary'))return'Leadership';
   if(p.includes('design'))return'Design';
   return'General';
