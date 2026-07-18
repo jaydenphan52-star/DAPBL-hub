@@ -886,6 +886,11 @@ textarea{resize:vertical;min-height:120px;}
 
       <!-- DOCUMENTS -->
       <div class="page" id="page-documents">
+        <div class="tabs">
+          <div class="tab active" onclick="showTab('documents','library')">Library</div>
+          <div class="tab" onclick="showTab('documents','pow');renderPow()">Program of Work</div>
+        </div>
+        <div class="sub active" id="documents-library">
         <div class="sg" style="margin-bottom:14px">
           <div class="sc"><div class="sl">Total Docs</div><div class="sv" id="docs-stat-total">0</div><div class="sm">Stored in hub</div></div>
           <div class="sc"><div class="sl">AI Classified</div><div class="sv" id="docs-stat-ai" style="color:var(--grn)">0</div><div class="sm">Auto-sorted</div></div>
@@ -925,6 +930,13 @@ textarea{resize:vertical;min-height:120px;}
             <div class="ch"><div class="ct">Document Library</div><input id="doc-search" type="text" placeholder="Search…" oninput="renderDocs()" style="font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none;width:140px"></div>
             <div id="docs-library"></div>
           </div>
+        </div>
+        </div>
+
+        <!-- PROGRAM OF WORK TAB -->
+        <div class="sub" id="documents-pow">
+          <div id="pow-list-view"></div>
+          <div id="pow-detail-view" style="display:none"></div>
         </div>
       </div>
 
@@ -5523,6 +5535,7 @@ async function saveData(){
     pblTransactions,merchSales,importedCalEvents,
     nM,nE,nB,nT,nA,nEv,nEmail,nCon,nCli,nDel,nCR,nCE,nCH,nTr,nMin,nPr,nGoal,nTD,nAnn,nMP,nSp,nPl,
     nEC,nReim,nVen,nVS,nCP,nCurr,nBKC,nBKF,nPost,nMCI,nPblTr,nMerch,nMDb,
+    powDocs,nPow,
     roleData:_collectRoleData()
   };
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}
@@ -5625,6 +5638,8 @@ function loadData(){
     if(d.nBKF!==undefined)nBKF=d.nBKF;
     if(d.nPost!==undefined)nPost=d.nPost;
     if(d.nMCI!==undefined)nMCI=d.nMCI;
+    if(d.powDocs)powDocs=d.powDocs;
+    if(d.nPow!==undefined)nPow=d.nPow;
     if(d.roleData)_applyRoleData(d.roleData);
   }catch(e){}
 }
@@ -5658,12 +5673,15 @@ function gsSearch(q){
   if(vRes.length)sections.push({cat:'Venues',items:vRes.map(v=>({label:v.name,sub:v.status,page:'portal-operations'}))});
   const agRes=_presAgendas.filter(a=>(a.title||'').toLowerCase().includes(lq)).slice(0,cap);
   if(agRes.length)sections.push({cat:'Agendas',items:agRes.map(a=>({label:a.title||'Meeting',sub:a.date,page:'agendas'}))});
+  const powRes=powDocs.filter(p=>(p.title+' '+p.dept).toLowerCase().includes(lq)).slice(0,cap);
+  if(powRes.length)sections.push({cat:'Program of Work',items:powRes.map(p=>({label:p.title,sub:p.dept+' · '+powPct(p)+'%',page:'documents',tab:'pow'}))});
   if(!sections.length){drop.innerHTML='<div class="gs-item" style="color:var(--t4)">No results</div>';drop.classList.add('open');return;}
-  drop.innerHTML=sections.map(s=>`<div class="gs-cat">${s.cat}</div>`+s.items.map(it=>`<div class="gs-item" onclick="gsGo('${it.page}')"><span style="font-weight:500">${it.label}</span>${it.sub?`<span style="font-size:10px;color:var(--t3);margin-left:6px">${it.sub}</span>`:''}</div>`).join('')).join('');
+  drop.innerHTML=sections.map(s=>`<div class="gs-cat">${s.cat}</div>`+s.items.map(it=>`<div class="gs-item" onclick="gsGo('${it.page}','${it.tab||''}')"><span style="font-weight:500">${it.label}</span>${it.sub?`<span style="font-size:10px;color:var(--t3);margin-left:6px">${it.sub}</span>`:''}</div>`).join('')).join('');
   drop.classList.add('open');
 }
-function gsGo(page){
+function gsGo(page,tab){
   showPage(page);
+  if(tab==='pow')setTimeout(()=>{showTab('documents','pow');renderPow();},50);
   document.getElementById('gs-input').value='';
   gsClose();
 }
@@ -5791,6 +5809,7 @@ const META={
   bootcamps:['Bootcamps','Session notes & attendance'],
   tasks:['Tasks','EBOD & general task boards'],
   agendas:['Agendas','Meeting attendance, agendas & topic notes'],
+  documents:['Documents','Library & program of work by department'],
   events:['Events','Upcoming, past & run of show'],
   templates:['Templates','Proposals, resources & timelines'],
   sponsors:['Finance','Sponsors, pipeline & email history'],
@@ -5938,6 +5957,148 @@ let docFolders=['General','Events','Finance','Competition','Bootcamps'];
 let activeDocFolder='';
 let _pendingDoc=null;
 
+// ── PROGRAM OF WORK ──
+let powDocs=[];let nPow=1;
+const POW_DEPTS=['Leadership','Finance','Operations','Strategy & Development','Marketing','Club Affairs'];
+const POW_TEMPLATE=['Overview','Goals & vision','Timeline','Budget','Logistics / cue sheet','Marketing plan','Post-event debrief'];
+function powPct(doc){
+  if(!doc.sections||!doc.sections.length)return 0;
+  return Math.round(doc.sections.filter(s=>s.done).length/doc.sections.length*100);
+}
+function _powStatusBadge(status){
+  const map={'Final':'bg','In review':'bb','Drafting':'bo','Not started':''};
+  return `<span class="badge ${map[status]||''}" style="flex-shrink:0">${status}</span>`;
+}
+function renderPow(){
+  const el=document.getElementById('pow-list-view');if(!el)return;
+  el.innerHTML=POW_DEPTS.map(dept=>{
+    const docs=powDocs.filter(p=>p.dept===dept);
+    const avg=docs.length?Math.round(docs.reduce((a,p)=>a+powPct(p),0)/docs.length):0;
+    return `<div class="card" style="margin-bottom:14px;padding:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${docs.length?'10px':'0'}">
+        <span style="font-size:12.5px;font-weight:700;color:var(--t1)">${dept}</span>
+        ${docs.length?`<div style="width:160px;height:5px;background:var(--s2);border-radius:3px;overflow:hidden"><div style="width:${avg}%;height:100%;background:var(--grn)"></div></div>
+        <span style="font-size:10px;color:var(--t3)">${avg}%</span>`:`<span style="font-size:10px;color:var(--t4)">No POW docs yet</span>`}
+        <span style="flex:1"></span>
+        <button class="btn btn-p btn-sm" onclick="addPowDoc('${dept.replace(/'/g,"\\'")}')">+ Add POW Doc</button>
+      </div>
+      ${docs.map(p=>{
+        const pct=powPct(p);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--bd);border-radius:6px;margin-bottom:6px;cursor:pointer" onclick="openPowDetail(${p.id})">
+          <div style="flex:1;min-width:0"><span style="font-size:12px;font-weight:600;color:var(--t1)">${p.title}</span>
+            <span style="font-size:10px;color:var(--t3);margin-left:6px">${p.owner||'—'} · ${p.term||'—'} · updated ${p.updated||'—'}</span></div>
+          ${p.link?`<a href="${p.link}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:var(--grn);text-decoration:none;flex-shrink:0;font-weight:600">Doc ↗</a>`:''}
+          <div style="width:70px;height:5px;background:var(--s2);border-radius:3px;overflow:hidden;flex-shrink:0"><div style="width:${pct}%;height:100%;background:var(--grn)"></div></div>
+          <span style="font-size:10px;color:var(--t3);width:32px;text-align:right;flex-shrink:0">${pct}%</span>
+          ${_powStatusBadge(p.status)}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+function addPowDoc(dept){
+  const title=prompt('POW doc title (e.g. "DASH 2026 POW"):');
+  if(!title||!title.trim())return;
+  const doc={id:nPow++,dept,title:title.trim(),owner:'',term:'',status:'Not started',link:'',
+    sections:POW_TEMPLATE.map((t,i)=>({id:i+1,t,done:false})),notes:'',
+    updated:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})};
+  powDocs.push(doc);
+  saveData();renderPow();openPowDetail(doc.id);
+}
+function _powTouch(p){p.updated=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function openPowDetail(id){
+  const p=powDocs.find(x=>x.id===id);if(!p)return;
+  document.getElementById('pow-list-view').style.display='none';
+  const dv=document.getElementById('pow-detail-view');dv.style.display='block';
+  dv.dataset.powId=id;
+  renderPowDetail();
+}
+function backToPowList(){
+  document.getElementById('pow-detail-view').style.display='none';
+  document.getElementById('pow-list-view').style.display='block';
+  renderPow();
+}
+function renderPowDetail(){
+  const dv=document.getElementById('pow-detail-view');if(!dv)return;
+  const p=powDocs.find(x=>x.id===parseInt(dv.dataset.powId));if(!p){backToPowList();return;}
+  const pct=powPct(p);
+  const statuses=['Not started','Drafting','In review','Final'];
+  dv.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
+      <button class="btn btn-g btn-sm" onclick="backToPowList()">&larr; Back</button>
+      <input type="text" value="${(p.title||'').replace(/"/g,'&quot;')}" style="font-size:15px;font-weight:700;border:none;background:none;color:var(--t1);outline:none;flex:1;min-width:160px" onchange="_powSetField(${p.id},'title',this.value)">
+      <select onchange="_powSetField(${p.id},'status',this.value)" style="font-size:10px;width:auto">${statuses.map(s=>`<option${p.status===s?' selected':''}>${s}</option>`).join('')}</select>
+      <span style="font-size:12px;font-weight:700;color:var(--t1)">${pct}% written</span>
+      <button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="deletePowDoc(${p.id})">Delete</button>
+    </div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span>${p.dept}</span> ·
+      <input type="text" value="${(p.owner||'').replace(/"/g,'&quot;')}" placeholder="Owner" style="font-size:11px;border:none;border-bottom:1px solid var(--bd);background:none;color:var(--t2);outline:none;width:120px" onchange="_powSetField(${p.id},'owner',this.value)"> ·
+      <input type="text" value="${(p.term||'').replace(/"/g,'&quot;')}" placeholder="Term (e.g. 2026-27)" style="font-size:11px;border:none;border-bottom:1px solid var(--bd);background:none;color:var(--t2);outline:none;width:130px" onchange="_powSetField(${p.id},'term',this.value)">
+      · updated ${p.updated||'—'}
+    </div>
+    <div style="height:6px;background:var(--s2);border-radius:3px;overflow:hidden;margin-bottom:14px"><div style="width:${pct}%;height:100%;background:var(--grn)"></div></div>
+    <div class="card" style="padding:14px;margin-bottom:14px">
+      <div class="dsl">Google Doc Link</div>
+      <div style="display:flex;gap:7px;align-items:center">
+        <input type="text" value="${(p.link||'').replace(/"/g,'&quot;')}" placeholder="Paste the Google Doc URL…" style="flex:1;font-size:11px;padding:6px 9px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none" onchange="_powSetField(${p.id},'link',this.value)">
+        ${p.link?`<a href="${p.link}" target="_blank" class="btn btn-p btn-sm" style="text-decoration:none">Open ↗</a>`:''}
+      </div>
+    </div>
+    <div class="card" style="padding:14px;margin-bottom:14px">
+      <div class="dsl">Sections — Check Off As They Get Written</div>
+      ${p.sections.map(s=>`<div class="tr" style="align-items:center">
+        <div class="tcb ${s.done?'done':''}" onclick="togglePowSection(${p.id},${s.id})"></div>
+        <div style="flex:1" class="tt ${s.done?'dk':''}">${s.t}</div>
+        <button class="btn btn-g btn-sm" style="color:var(--cr)" onclick="delPowSection(${p.id},${s.id})">✕</button>
+      </div>`).join('')||'<div style="font-size:11px;color:var(--t4);padding:4px 0">No sections yet.</div>'}
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <input id="pow-new-section" type="text" placeholder="Add a section…" style="flex:1;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--t1);font-family:'IBM Plex Sans',sans-serif;outline:none">
+        <button class="btn btn-p btn-sm" onclick="addPowSection(${p.id})">+ Add</button>
+      </div>
+    </div>
+    <div class="card" style="padding:14px">
+      <div class="dsl">Notes</div>
+      <textarea style="min-height:90px;line-height:1.6" placeholder="Review comments, blockers, links…" onchange="_powSetField(${p.id},'notes',this.value)">${String(p.notes||'').replace(/</g,'&lt;')}</textarea>
+    </div>`;
+}
+function _powSetField(id,key,val){
+  const p=powDocs.find(x=>x.id===id);if(!p)return;
+  p[key]=val;_powTouch(p);
+  saveData();
+  if(key!=='notes')renderPowDetail();
+}
+function togglePowSection(id,sid){
+  const p=powDocs.find(x=>x.id===id);if(!p)return;
+  const s=p.sections.find(x=>x.id===sid);if(!s)return;
+  s.done=!s.done;
+  const pct=powPct(p);
+  if(pct===100)p.status='Final';
+  else if(pct>0&&p.status==='Not started')p.status='Drafting';
+  else if(pct<100&&p.status==='Final')p.status='Drafting';
+  _powTouch(p);saveData();renderPowDetail();
+}
+function addPowSection(id){
+  const p=powDocs.find(x=>x.id===id);if(!p)return;
+  const t=document.getElementById('pow-new-section').value.trim();if(!t)return;
+  const nid=(p.sections.length?Math.max(...p.sections.map(s=>s.id)):0)+1;
+  p.sections.push({id:nid,t,done:false});
+  if(p.status==='Final')p.status='Drafting';
+  _powTouch(p);saveData();renderPowDetail();
+}
+function delPowSection(id,sid){
+  const p=powDocs.find(x=>x.id===id);if(!p)return;
+  p.sections=p.sections.filter(s=>s.id!==sid);
+  if(powPct(p)===100&&p.sections.length)p.status='Final';
+  _powTouch(p);saveData();renderPowDetail();
+}
+function deletePowDoc(id){
+  const p=powDocs.find(x=>x.id===id);if(!p)return;
+  if(!confirm('Delete "'+p.title+'"? The Google Doc itself is not affected.'))return;
+  powDocs=powDocs.filter(x=>x.id!==id);
+  saveData();backToPowList();
+}
+
 function renderDocFolders(){
   const fl=document.getElementById('doc-folder-list');if(!fl)return;
   fl.innerHTML=`<div class="cr" style="padding:5px 8px;border-radius:5px;font-size:12px;cursor:pointer;font-weight:${!activeDocFolder?'600':'400'};color:${!activeDocFolder?'var(--t1)':'var(--t3)'}" onclick="setDocFolder('')">All Documents <span style="color:var(--t4);font-size:10px">(${hubDocs.length})</span></div>`+
@@ -5992,6 +6153,16 @@ function renderDocs(){
       <button class="rb" style="opacity:.4;margin-left:8px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.4" onclick="event.stopPropagation();hubDocs=hubDocs.filter(x=>x.id!==${d.id});renderDocs();updateDocStats();saveData()">&times;</button>
     </div>`).join('')
     :'<div style="color:var(--t4);font-size:12px;padding:16px 0">No documents here yet.</div>';
+  if(q){
+    const powMatches=powDocs.filter(p=>(p.title+' '+p.dept).toLowerCase().includes(q));
+    if(powMatches.length){
+      lib.innerHTML+=`<div style="font-size:9px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:1px;margin:12px 0 4px">Program of Work</div>`+
+        powMatches.map(p=>`<div class="cr" style="padding:8px 4px;cursor:pointer;border-radius:5px" onclick="showTab('documents','pow');renderPow();openPowDetail(${p.id})">
+          <div style="font-size:12px;font-weight:600;color:var(--t1)">${p.title}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">${p.dept} · ${powPct(p)}% written · ${p.status}</div>
+        </div>`).join('');
+    }
+  }
   updateDocStats();
 }
 function updateDocStats(){
@@ -6164,6 +6335,8 @@ function _applyFirestoreData(d){
   if(d.pblTransactions)pblTransactions=d.pblTransactions;
   if(d.merchSales)merchSales=d.merchSales;
   if(d.importedCalEvents)importedCalEvents=d.importedCalEvents;
+  if(d.powDocs)powDocs=d.powDocs;
+  if(d.nPow!==undefined)nPow=d.nPow;
   if(d.roleData)_applyRoleData(d.roleData);
   // Also write to localStorage so syncFromEBOD() still works same-device
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}
@@ -6203,7 +6376,7 @@ function _tryApplyRemote(){
   const d=_pendingRemote;_pendingRemote=null;
   _applyFirestoreData(d);
   _renderAll();
-  try{renderPortals();renderCalendar();renderVenues();renderVendors();renderDocs();}catch(e){}
+  try{renderPortals();renderCalendar();renderVenues();renderVendors();renderDocs();renderPow();}catch(e){}
   try{
     if(_evOpenId!=null)renderEvDetail();
     if(_paOpenIdx!=null)renderAgendaDetailView();
@@ -6361,6 +6534,8 @@ async function _loadSupabaseData(){
   if(d.mdbPlacements)mdbPlacements=d.mdbPlacements;if(d.nMDbPl!==undefined)nMDbPl=d.nMDbPl;
   if(d.hubDocs)hubDocs=d.hubDocs;if(d.nDoc!==undefined)nDoc=d.nDoc;
   if(d.docFolders)docFolders=d.docFolders;
+  if(d.powDocs)powDocs=d.powDocs;
+  if(d.nPow!==undefined)nPow=d.nPow;
   if(d.roleData)_applyRoleData(d.roleData);
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}
 }
