@@ -2530,7 +2530,7 @@ window._storage = firebase.storage();
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
                   <circle cx="8" cy="5" r="3" />
                   <path d="M2 14c0-3 2.5-5 6-5s6 2 6 5" /></svg
-                >Club Affairs
+                >Communications
               </div>
             </div>
             <div class="nav-group">
@@ -9952,7 +9952,7 @@ window._storage = firebase.storage();
               <option>Operations</option>
               <option>Strategy</option>
               <option>Marketing</option>
-              <option>Club Affairs</option>
+              <option>Communications</option>
             </select>
           </div>
         </div>
@@ -10268,7 +10268,7 @@ window._storage = firebase.storage();
               <option>VP Operations</option>
               <option>VP Strategy</option>
               <option>VP Marketing</option>
-              <option>VP Club Affairs</option>
+              <option>VP Communications</option>
               <option>Secretary</option>
             </select>
           </div>
@@ -10331,7 +10331,7 @@ window._storage = firebase.storage();
               <option>VP Operations</option>
               <option>VP Strategy</option>
               <option>VP Marketing</option>
-              <option>VP Club Affairs</option>
+              <option>VP Communications</option>
             </select>
           </div>
           <div class="fg">
@@ -11092,7 +11092,7 @@ let execTeam = [
   { id: 4, name: 'George Huang', position: 'VP of Finance' },
   { id: 5, name: 'Addy Hu', position: 'VP of Operations' },
   { id: 6, name: 'Nhi Tran', position: 'VP of Marketing' },
-  { id: 7, name: 'Christina Tran', position: 'VP of Club Affairs' },
+  { id: 7, name: 'Christina Tran', position: 'VP of Communications' },
   { id: 8, name: 'Anna Huynh', position: 'Director of Finance' },
   { id: 9, name: 'Iker Jimenez', position: 'Director of Strategy & Development' },
   { id: 10, name: 'Jordan Nguyen', position: 'Director of Marketing' },
@@ -11104,7 +11104,7 @@ let execTeam = [
   { id: 15, name: 'Jayden Phan', position: 'VP of Operations' },
   { id: 16, name: 'William Devanney', position: 'VP of Finance' },
   { id: 17, name: 'Ruirui Wu', position: 'VP of Marketing' },
-  { id: 18, name: 'Bryant Vo', position: 'VP of Club Affairs' },
+  { id: 18, name: 'Bryant Vo', position: 'VP of Communications' },
 ];
 let nE = 19;
 
@@ -14453,7 +14453,7 @@ function imeAddNewExec() {
     'VP of Operations',
     'VP of Strategy & Development',
     'VP of Marketing',
-    'VP of Club Affairs',
+    'VP of Communications',
     'Director',
     'Custom',
   ];
@@ -17671,7 +17671,7 @@ function loadData() {
     if (!raw) return;
     const d = JSON.parse(raw);
     if (d.members) members = d.members;
-    if (d.execTeam) execTeam = d.execTeam;
+    if (d.execTeam) execTeam = d.execTeam.map((e) => ({ ...e, position: (e.position || '').replace(/Club Affairs/g, 'Communications') })); // migrate renamed role
     if (d.bootcamps) bootcamps = d.bootcamps;
     if (d.tasks) tasks = d.tasks;
     if (d.agendas) agendas = d.agendas;
@@ -18307,7 +18307,7 @@ const META = {
   'portal-operations': ['VP of Operations', ''],
   'portal-strategy': ['VP of Strategy & Development', ''],
   'portal-marketing': ['VP of Marketing', ''],
-  'portal-clubaffairs': ['VP of Club Affairs', ''],
+  'portal-clubaffairs': ['VP of Communications', ''],
   homework: ['Homework', 'Review & grade member submissions'],
 };
 function showPage(id) {
@@ -18945,7 +18945,7 @@ renderCalendar();
 function _applyFirestoreData(d) {
   d = _deepFix(d); // sanitize any garbled characters before applying
   if (d.members) members = d.members;
-  if (d.execTeam) execTeam = d.execTeam;
+  if (d.execTeam) execTeam = d.execTeam.map((e) => ({ ...e, position: (e.position || '').replace(/Club Affairs/g, 'Communications') })); // migrate renamed role
   if (d.bootcamps) bootcamps = d.bootcamps;
   if (d.tasks) tasks = d.tasks;
   if (d.agendas) agendas = d.agendas;
@@ -19227,7 +19227,7 @@ const mExecTeam = [
   { id: 4, name: 'Jayden Phan', position: 'VP of Operations' },
   { id: 5, name: 'William Devanney', position: 'VP of Finance' },
   { id: 6, name: 'Ruirui Wu', position: 'VP of Marketing' },
-  { id: 7, name: 'Bryant Vo', position: 'VP of Club Affairs' },
+  { id: 7, name: 'Bryant Vo', position: 'VP of Communications' },
 ];
 
 const memberCount = 89;
@@ -23191,7 +23191,7 @@ function renderIMMyMentorship() {
   }
   if (!myMentor && !myMentees.length) {
     html =
-      '<div class="card"><div style="padding:20px;text-align:center"><div style="font-size:24px;margin-bottom:8px">👥</div><div style="font-size:13px;font-weight:600;margin-bottom:4px">Not in mentorship program</div><div style="font-size:11px;color:var(--t3)">Talk to your VP of Club Affairs to get matched with a mentor.</div></div></div>';
+      '<div class="card"><div style="padding:20px;text-align:center"><div style="font-size:24px;margin-bottom:8px">👥</div><div style="font-size:13px;font-weight:600;margin-bottom:4px">Not in mentorship program</div><div style="font-size:11px;color:var(--t3)">Talk to your VP of Communications to get matched with a mentor.</div></div></div>';
   }
   el.innerHTML = html;
   renderIMCheckinLog();
