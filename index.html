@@ -2427,10 +2427,6 @@ window._storage = firebase.storage();
       </div>
       <div class="land-form show" id="land-google-form">
         <div class="land-form-title">Sign In</div>
-        <div style="font-size: 11.5px; color: var(--t3); margin-bottom: 16px; text-align: center; line-height: 1.5">
-          One account for everyone &mdash; execs and members are routed to the right portal
-          automatically.
-        </div>
         <div class="land-error" id="land-err"></div>
         <button
           class="land-btn"
@@ -20820,11 +20816,12 @@ function initIM() {
 
 
 // ─── GOOGLE SIGN-IN & PORTAL ROUTING ─────────────────────────────────────────
-// The club account is the only email that opens the EBOD portal; every other
-// Google account is routed to the member portal.
-const EBOD_EMAIL = 'deanzacapbl@gmail.com';
+// These emails open the EBOD portal and can switch to the member portal; every
+// other Google account is routed straight to the member portal.
+// Keep this list in sync with the isEBOD() emails in firestore.rules.
+const EBOD_EMAILS = ['deanzacapbl@gmail.com', 'jaydenphan52@gmail.com'];
 function isEBODUser(user) {
-  return !!user && (user.email || '').toLowerCase() === EBOD_EMAIL;
+  return !!user && EBOD_EMAILS.includes((user.email || '').toLowerCase());
 }
 function routePortal(user) {
   document.getElementById('landing').style.display = 'none';
